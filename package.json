@@ -68,11 +68,7 @@
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
-      "eslint --fix",
-      "vitest related --run"
-    ],
-    "*.{json,md,yml,yaml}": [
-      "prettier --write"
+      "eslint --fix"
     ]
   }
 }

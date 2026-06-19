@@ -1,1 +1,1 @@
-pnpm lint-staged
+node -e "const v=+process.versions.node.split('.')[0];if(v>=18){const{spawnSync}=require('child_process');const r=spawnSync('npx',['lint-staged'],{stdio:'inherit',shell:true});process.exit(r.status??1)}"

@@ -31,8 +31,26 @@ model Article {
   views      Int      @default(0)
   content    String   // 富文本内容（HTML）
   updatedAt  DateTime @updatedAt
+  comments   Comment[]
 
   @@index([title])
   @@index([createdAt])
   @@index([author])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  articleId String
+  nickname  String
+  email     String
+  content   String
+  status    String   @default("pending")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@index([articleId])
+  @@index([status])
+  @@index([createdAt])
 }

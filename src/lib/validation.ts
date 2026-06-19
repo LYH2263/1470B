@@ -26,3 +26,24 @@ export const ArticleSchema = z.object({
 });
 
 export type ArticleInput = z.infer<typeof ArticleSchema>;
+
+export const CommentSchema = z.object({
+  nickname: z
+    .string()
+    .trim()
+    .min(1, '昵称不能为空')
+    .max(50, '昵称不能超过50个字符'),
+  email: z
+    .string()
+    .trim()
+    .min(1, '邮箱不能为空')
+    .max(100, '邮箱不能超过100个字符')
+    .email('邮箱格式不正确'),
+  content: z
+    .string()
+    .trim()
+    .min(1, '评论内容不能为空')
+    .max(2000, '评论内容不能超过2000个字符'),
+});
+
+export type CommentInput = z.infer<typeof CommentSchema>;

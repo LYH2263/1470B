@@ -1,5 +1,5 @@
 import { Layout, Menu } from 'antd';
-import { FileTextOutlined, DashboardOutlined } from '@ant-design/icons';
+import { FileTextOutlined, DashboardOutlined, CommentOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/router';
 import type { MenuProps } from 'antd';
 
@@ -20,13 +20,17 @@ export default function Sidebar() {
       icon: <FileTextOutlined />,
       label: '文章管理',
     },
+    {
+      key: '/comments',
+      icon: <CommentOutlined />,
+      label: '评论管理',
+    },
   ];
 
   const handleMenuClick: MenuProps['onClick'] = (e) => {
     router.push(e.key);
   };
 
-  // 确定当前选中的菜单项
   const selectedKey = pathname.startsWith('/articles') || pathname === '/' ? '/' : pathname;
 
   return (
