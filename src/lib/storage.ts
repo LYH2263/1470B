@@ -2,6 +2,14 @@ import { Prisma } from '@prisma/client';
 import { prisma } from './prisma';
 import type { Article, ArticleFormData, ArticleListQuery, ArticleListResponse } from '@/types/article';
 import type { Tag, TagFormData, TagListQuery, TagListResponse, TagWithCount } from '@/types/tag';
+import type {
+  MediaFile,
+  MediaFileFormData,
+  MediaFileListQuery,
+  MediaFileListResponse,
+  MediaFolder,
+  MediaFolderFormData,
+} from '@/types/media';
 import { PAGINATION } from './constants';
 
 // 辅助函数：将 Prisma 模型转换为 DTO
@@ -386,4 +394,256 @@ export async function getPopularTags(limit: number = 10): Promise<TagWithCount[]
       };
     })
     .filter((item): item is TagWithCount => item !== null);
+}
+
+// 媒体文件 DTO 转换
+function mapMediaFileToDTO(file: {
+  id: string;
+  filename: string;
+  storedName: string;
+  url: string;
+  mimeType: string;
+  size: number;
+  folderId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}): MediaFile {
+  return {
+    id: file.id,
+    filename: file.filename,
+    storedName: file.storedName,
+    url: file.url,
+    mimeType: file.mimeType,
+    size: file.size,
+    folderId: file.folderId,
+    createdAt: file.createdAt.toISOString(),
+    updatedAt: file.updatedAt.toISOString(),
+  };
+}
+
+// 媒体文件夹 DTO 转换
+function mapMediaFolderToDTO(folder: {
+  id: string;
+  name: string;
+  parentId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}): MediaFolder {
+  return {
+    id: folder.id,
+    name: folder.name,
+    parentId: folder.parentId,
+    createdAt: folder.createdAt.toISOString(),
+    updatedAt: folder.updatedAt.toISOString(),
+  };
+}
+
+// 创建媒体文件记录
+export async function createMediaFile(data: MediaFileFormData): Promise<MediaFile> {
+  const file = await prisma.mediaFile.create({
+    data: {
+      filename: data.filename,
+      storedName: data.storedName,
+      url: data.url,
+      mimeType: data.mimeType,
+      size: data.size,
+      folderId: data.folderId || null,
+    },
+  });
+
+  return mapMediaFileToDTO(file);
+}
+
+// 获取媒体文件列表（支持分页、搜索、按文件夹筛选）
+export async function getMediaFiles(query: MediaFileListQuery = {}): Promise<MediaFileListResponse> {
+  const {
+    page = PAGINATION.DEFAULT_PAGE,
+    pageSize = PAGINATION.DEFAULT_PAGE_SIZE,
+    keyword,
+    folderId,
+  } = query;
+
+  const where: Prisma.MediaFileWhereInput = {};
+
+  if (keyword) {
+    where.filename = {
+      contains: keyword,
+    };
+  }
+
+  if (folderId !== undefined && folderId !== null) {
+    where.folderId = folderId;
+  } else if (folderId === null) {
+    where.folderId = null;
+  }
+
+  const [total, files] = await Promise.all([
+    prisma.mediaFile.count({ where }),
+    prisma.mediaFile.findMany({
+      where,
+      orderBy: {
+        createdAt: 'desc',
+      },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+  ]);
+
+  const data = files.map(mapMediaFileToDTO);
+
+  return {
+    data,
+    total,
+    page,
+    pageSize,
+  };
+}
+
+// 根据 ID 获取单个媒体文件
+export async function getMediaFileById(id: string): Promise<MediaFile | null> {
+  const file = await prisma.mediaFile.findUnique({
+    where: { id },
+  });
+
+  if (!file) return null;
+
+  return mapMediaFileToDTO(file);
+}
+
+// 删除媒体文件（支持批量），不删除实际文件（可根据需求扩展）
+export async function deleteMediaFiles(ids: string[]): Promise<number> {
+  const result = await prisma.mediaFile.deleteMany({
+    where: {
+      id: {
+        in: ids,
+      },
+    },
+  });
+
+  return result.count;
+}
+
+// 获取所有文件夹（树形结构）
+export async function getAllMediaFolders(): Promise<MediaFolder[]> {
+  const folders = await prisma.mediaFolder.findMany({
+    orderBy: {
+      name: 'asc',
+    },
+    include: {
+      _count: {
+        select: { files: true },
+      },
+    },
+  });
+
+  const folderMap = new Map<string, MediaFolder>();
+  const rootFolders: MediaFolder[] = [];
+
+  folders.forEach((folder) => {
+    const dto: MediaFolder = {
+      ...mapMediaFolderToDTO(folder),
+      children: [],
+      fileCount: folder._count.files,
+    };
+    folderMap.set(folder.id, dto);
+  });
+
+  folders.forEach((folder) => {
+    const dto = folderMap.get(folder.id)!;
+    if (folder.parentId && folderMap.has(folder.parentId)) {
+      folderMap.get(folder.parentId)!.children!.push(dto);
+    } else {
+      rootFolders.push(dto);
+    }
+  });
+
+  return rootFolders;
+}
+
+// 获取扁平列表的所有文件夹
+export async function getFlatMediaFolders(): Promise<MediaFolder[]> {
+  const folders = await prisma.mediaFolder.findMany({
+    orderBy: {
+      name: 'asc',
+    },
+    include: {
+      _count: {
+        select: { files: true },
+      },
+    },
+  });
+
+  return folders.map((folder) => ({
+    ...mapMediaFolderToDTO(folder),
+    fileCount: folder._count.files,
+  }));
+}
+
+// 创建文件夹
+export async function createMediaFolder(data: MediaFolderFormData): Promise<MediaFolder> {
+  const folder = await prisma.mediaFolder.create({
+    data: {
+      name: data.name,
+      parentId: data.parentId || null,
+    },
+  });
+
+  return mapMediaFolderToDTO(folder);
+}
+
+// 更新文件夹
+export async function updateMediaFolder(id: string, data: MediaFolderFormData): Promise<MediaFolder | null> {
+  try {
+    const folder = await prisma.mediaFolder.update({
+      where: { id },
+      data: {
+        name: data.name,
+        parentId: data.parentId || null,
+      },
+    });
+
+    return mapMediaFolderToDTO(folder);
+  } catch (error: unknown) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      return null;
+    }
+    if (
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      typeof (error as { code?: unknown }).code === 'string' &&
+      (error as { code: string }).code === 'P2025'
+    ) {
+      return null;
+    }
+
+    console.error('更新文件夹失败:', error);
+    throw error;
+  }
+}
+
+// 删除文件夹（级联删除子文件夹和文件记录）
+export async function deleteMediaFolder(id: string): Promise<boolean> {
+  try {
+    await prisma.mediaFolder.delete({
+      where: { id },
+    });
+    return true;
+  } catch (error: unknown) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      return false;
+    }
+    if (
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      typeof (error as { code?: unknown }).code === 'string' &&
+      (error as { code: string }).code === 'P2025'
+    ) {
+      return false;
+    }
+
+    console.error('删除文件夹失败:', error);
+    throw error;
+  }
 }

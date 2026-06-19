@@ -4,8 +4,10 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import formidable from 'formidable';
 import type { ApiResponse } from '@/types/article';
+import type { MediaFile } from '@/types/media';
 import { FILE_UPLOAD } from '@/lib/constants';
 import { withAuth, type AuthenticatedRequest } from '@/lib/middleware';
+import { createMediaFile } from '@/lib/storage';
 
 type AllowedMimeType = (typeof FILE_UPLOAD.ALLOWED_TYPES)[number];
 function isAllowedMimeType(value: unknown): value is AllowedMimeType {
@@ -36,7 +38,7 @@ export default withAuth(async function handler(
 
   try {
     const form = formidable({});
-    const [, files] = await form.parse(req);
+    const [fields, files] = await form.parse(req);
 
     const file = files.file?.[0];
 
@@ -46,6 +48,9 @@ export default withAuth(async function handler(
         error: '请选择要上传的文件',
       });
     }
+
+    const folderIdField = fields.folderId?.[0];
+    const folderId = folderIdField ? String(folderIdField) : undefined;
 
     try {
       // 验证文件类型
@@ -75,7 +80,8 @@ export default withAuth(async function handler(
       }
 
       // 使用安全的文件名（不依赖用户输入）
-      const filename = `${uuidv4()}${originalExt}`;
+      const storedName = `${uuidv4()}${originalExt}`;
+      const originalFilename = file.originalFilename || storedName;
 
       // 创建上传目录（按日期分类）
       const now = new Date();
@@ -88,15 +94,25 @@ export default withAuth(async function handler(
 
       // 读取并保存文件
       const buffer = await readFile(file.filepath);
-      const filepath = path.join(uploadDir, filename);
+      const filepath = path.join(uploadDir, storedName);
       await writeFile(filepath, buffer);
 
       // 返回文件 URL
-      const url = `/uploads/${year}/${month}/${day}/${filename}`;
+      const url = `/uploads/${year}/${month}/${day}/${storedName}`;
+
+      // 写入 MediaFile 表记录元数据
+      const mediaFile: MediaFile = await createMediaFile({
+        filename: originalFilename,
+        storedName,
+        url,
+        mimeType: file.mimetype!,
+        size: file.size,
+        folderId: folderId || null,
+      });
 
       return res.status(200).json({
         success: true,
-        data: { url },
+        data: { url, id: mediaFile.id },
       });
     } finally {
       // 清理 formidable 临时文件，避免积累占用磁盘

@@ -1,7 +1,11 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { EDITOR_CONFIG } from '@/lib/constants';
 import { fetchWithAuth } from '@/lib/api';
+import { Button, Dropdown, message } from 'antd';
+import { PictureOutlined, UploadOutlined, FolderOutlined } from '@ant-design/icons';
+import type { MenuProps } from 'antd';
+import MediaLibraryPicker from './MediaLibraryPicker';
 import 'react-quill/dist/quill.snow.css';
 
 // 动态导入 ReactQuill，禁用 SSR
@@ -16,17 +20,27 @@ interface RichTextEditorProps {
 
 export default function RichTextEditor({ value = '', onChange, placeholder }: RichTextEditorProps) {
   const [mounted, setMounted] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const editorRef = useRef<any>(null);
 
   // 确保组件已挂载
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // 自定义图片上传处理
-  const imageHandler = useCallback(function(this: any) {
-    // 在 handler 中，this 指向 Quill 实例
-    const editor = this.quill;
-    if (!editor) return;
+  // 自定义图片上传处理 - 同时保存 editor 引用
+  const imageHandler = useCallback(function (this: any) {
+    // 在 handler 中，this 指向 toolbar，this.quill 是编辑器实例
+    editorRef.current = this.quill;
+  }, []);
+
+  // 从本地文件上传
+  const handleUploadLocal = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) {
+      message.warning('编辑器未就绪，请稍后重试');
+      return;
+    }
 
     const input = document.createElement('input');
     input.setAttribute('type', 'file');
@@ -52,16 +66,48 @@ export default function RichTextEditor({ value = '', onChange, placeholder }: Ri
           const range = editor.getSelection();
           editor.insertEmbed(range?.index ?? 0, 'image', result.data.url);
         } else {
-          alert(result.error || '上传失败');
+          message.error(result.error || '上传失败');
         }
       } catch (error) {
         console.error('上传图片失败:', error);
-        alert('上传图片失败');
+        message.error('上传图片失败');
       }
     };
   }, []);
 
-  // Quill 编辑器配置 - 使用 useMemo 避免每次渲染都重新创建
+  // 打开媒体库选择器
+  const handleOpenLibrary = useCallback(() => {
+    setPickerOpen(true);
+  }, []);
+
+  // 从媒体库选择图片后插入
+  const handleSelectFromLibrary = useCallback((url: string) => {
+    const editor = editorRef.current;
+    if (!editor) {
+      message.warning('编辑器未就绪，请稍后重试');
+      return;
+    }
+
+    const range = editor.getSelection();
+    editor.insertEmbed(range?.index ?? 0, 'image', url);
+  }, []);
+
+  const imageMenuItems: MenuProps['items'] = [
+    {
+      key: 'upload',
+      icon: <UploadOutlined />,
+      label: '本地上传',
+      onClick: handleUploadLocal,
+    },
+    {
+      key: 'library',
+      icon: <FolderOutlined />,
+      label: '从媒体库选择',
+      onClick: handleOpenLibrary,
+    },
+  ];
+
+  // Quill 编辑器配置
   const modules = useMemo(
     () => ({
       toolbar: {
@@ -121,8 +167,8 @@ export default function RichTextEditor({ value = '', onChange, placeholder }: Ri
   }
 
   return (
-    <div className="rich-text-editor">
-      {/* @ts-ignore - react-quill ref type issue */}
+    <div className="rich-text-editor" style={{ position: 'relative' }}>
+      {/* @ts-ignore - react-quill 类型定义问题 */}
       <ReactQuill
         theme="snow"
         value={value}
@@ -134,6 +180,31 @@ export default function RichTextEditor({ value = '', onChange, placeholder }: Ri
           height: `${EDITOR_CONFIG.HEIGHT}px`,
           marginBottom: `${EDITOR_CONFIG.MARGIN_BOTTOM}px`,
         }}
+      />
+      {/* 自定义图片下拉按钮，覆盖默认 image 按钮 */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 8,
+          right: 48,
+          zIndex: 10,
+        }}
+      >
+        <Dropdown menu={{ items: imageMenuItems }} placement="bottomLeft" trigger={['click']}>
+          <Button
+            type="text"
+            icon={<PictureOutlined />}
+            size="small"
+            title="插入图片"
+            style={{ height: 28 }}
+          />
+        </Dropdown>
+      </div>
+
+      <MediaLibraryPicker
+        open={pickerOpen}
+        onCancel={() => setPickerOpen(false)}
+        onSelect={handleSelectFromLibrary}
       />
     </div>
   );

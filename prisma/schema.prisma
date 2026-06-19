@@ -80,3 +80,36 @@ model Comment {
   @@index([status])
   @@index([createdAt])
 }
+
+model MediaFolder {
+  id        String      @id @default(uuid())
+  name      String
+  parentId  String?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  parent    MediaFolder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children  MediaFolder[] @relation("FolderHierarchy")
+  files     MediaFile[]
+
+  @@index([parentId])
+  @@index([name])
+}
+
+model MediaFile {
+  id        String   @id @default(uuid())
+  filename  String   // 原始文件名
+  storedName String  // 存储的文件名（UUID）
+  url       String   // 访问URL
+  mimeType  String   // MIME类型
+  size      Int      // 文件大小（字节）
+  folderId  String?  // 所在文件夹ID
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  folder    MediaFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+  @@index([folderId])
+  @@index([filename])
+  @@index([createdAt])
+}

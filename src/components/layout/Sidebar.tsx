@@ -1,5 +1,5 @@
 import { Layout, Menu } from 'antd';
-import { FileTextOutlined, DashboardOutlined, CommentOutlined, TagsOutlined } from '@ant-design/icons';
+import { FileTextOutlined, DashboardOutlined, CommentOutlined, TagsOutlined, PictureOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/router';
 import type { MenuProps } from 'antd';
 
@@ -19,6 +19,11 @@ export default function Sidebar() {
       key: '/',
       icon: <FileTextOutlined />,
       label: '文章管理',
+    },
+    {
+      key: '/media',
+      icon: <PictureOutlined />,
+      label: '媒体库',
     },
     {
       key: '/tags',
