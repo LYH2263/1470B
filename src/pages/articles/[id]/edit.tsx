@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Card, Spin, message, Button, Space } from 'antd';
+import { Card, Spin, message, Button, Space, Collapse } from 'antd';
+import { HistoryOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/router';
 import ArticleForm from '@/components/articles/ArticleForm';
+import VersionHistory from '@/components/articles/VersionHistory';
 import MainLayout from '@/components/layout/MainLayout';
 import type { Article } from '@/types/article';
 import { fetchWithAuth } from '@/lib/api';
@@ -72,6 +74,24 @@ export default function EditArticlePage() {
         >
           <ArticleForm mode="edit" initialValues={article} formId="article-form" />
         </Card>
+
+        {typeof id === 'string' && (
+          <Collapse
+            style={{ marginTop: 16 }}
+            items={[
+              {
+                key: 'versions',
+                label: (
+                  <span>
+                    <HistoryOutlined style={{ marginRight: 8 }} />
+                    版本历史
+                  </span>
+                ),
+                children: <VersionHistory articleId={id} />,
+              },
+            ]}
+          />
+        )}
       </div>
     </MainLayout>
   );

@@ -1,5 +1,6 @@
 import type { NextApiResponse } from 'next';
 import { getArticleById, updateArticle, deleteArticles } from '@/lib/storage';
+import { createVersion, generateChangeSummary } from '@/lib/version-storage';
 import { ArticleWithTagsSchema } from '@/lib/validation';
 import type { ApiResponse } from '@/types/article';
 import { withAuth, type AuthenticatedRequest } from '@/lib/middleware';
@@ -71,6 +72,18 @@ async function handler(
           error: '文章不存在',
         });
       }
+
+      const modifiedBy = req.user?.username || 'system';
+      const summary = await generateChangeSummary(id, validationResult.data.title, validationResult.data.content);
+      await createVersion({
+        articleId: id,
+        title: validationResult.data.title,
+        content: validationResult.data.content,
+        author: validationResult.data.author,
+        importance: validationResult.data.importance,
+        modifiedBy,
+        changeSummary: summary,
+      });
 
       return res.status(200).json({
         success: true,

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Card, Descriptions, Button, Spin, Tag, message, Space, Divider, List, Form, Input, Avatar, Empty } from 'antd';
-import { UserOutlined, MessageOutlined } from '@ant-design/icons';
+import { UserOutlined, MessageOutlined, HistoryOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/router';
 import DOMPurify from 'isomorphic-dompurify';
 import MainLayout from '@/components/layout/MainLayout';
+import VersionHistory from '@/components/articles/VersionHistory';
 import type { Article } from '@/types/article';
 import type { Comment, CommentFormData } from '@/types/comment';
 import { formatDate, importanceMap } from '@/lib/utils';
@@ -17,6 +18,7 @@ export default function ArticleDetailPage() {
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [form] = Form.useForm<CommentFormData>();
 
   useEffect(() => {
@@ -130,6 +132,13 @@ export default function ArticleDetailPage() {
           title="文章详情"
           extra={
             <Space>
+              <Button
+                icon={<HistoryOutlined />}
+                onClick={() => setShowVersionHistory(!showVersionHistory)}
+                type={showVersionHistory ? 'primary' : 'default'}
+              >
+                版本历史
+              </Button>
               <Button onClick={() => router.push(`/articles/${id}/edit`)}>编辑</Button>
               <Button onClick={() => router.back()}>返回</Button>
             </Space>
@@ -157,6 +166,12 @@ export default function ArticleDetailPage() {
             </Descriptions.Item>
           </Descriptions>
         </Card>
+
+        {showVersionHistory && typeof id === 'string' && (
+          <div style={{ marginTop: 16 }}>
+            <VersionHistory articleId={id} />
+          </div>
+        )}
 
         <Card
           title={

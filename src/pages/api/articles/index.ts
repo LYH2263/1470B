@@ -1,5 +1,6 @@
 import type { NextApiResponse } from 'next';
 import { getArticles, createArticle, deleteArticles } from '@/lib/storage';
+import { createVersion, generateChangeSummary } from '@/lib/version-storage';
 import { ArticleWithTagsSchema } from '@/lib/validation';
 import type { ApiResponse } from '@/types/article';
 import { PAGINATION, SEARCH } from '@/lib/constants';
@@ -66,6 +67,18 @@ async function handler(
       }
 
       const article = await createArticle(validationResult.data);
+
+      const modifiedBy = req.user?.username || 'system';
+      const summary = await generateChangeSummary(article.id, validationResult.data.title, validationResult.data.content);
+      await createVersion({
+        articleId: article.id,
+        title: validationResult.data.title,
+        content: validationResult.data.content,
+        author: validationResult.data.author,
+        importance: validationResult.data.importance,
+        modifiedBy,
+        changeSummary: summary,
+      });
 
       return res.status(200).json({
         success: true,
