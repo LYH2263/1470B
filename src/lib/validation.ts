@@ -47,3 +47,32 @@ export const CommentSchema = z.object({
 });
 
 export type CommentInput = z.infer<typeof CommentSchema>;
+
+const hexColorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+
+export const TagSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, '标签名称不能为空')
+    .max(50, '标签名称不能超过50个字符'),
+  color: z
+    .string()
+    .trim()
+    .min(1, '标签颜色不能为空')
+    .regex(hexColorRegex, '颜色格式不正确，请使用十六进制颜色码（如 #1890ff）'),
+  description: z
+    .string()
+    .trim()
+    .max(200, '描述不能超过200个字符')
+    .optional()
+    .or(z.literal('')),
+});
+
+export type TagInput = z.infer<typeof TagSchema>;
+
+export const ArticleWithTagsSchema = ArticleSchema.extend({
+  tagIds: z.array(z.string().uuid('标签ID格式不正确')).optional(),
+});
+
+export type ArticleWithTagsInput = z.infer<typeof ArticleWithTagsSchema>;

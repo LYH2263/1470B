@@ -1,8 +1,10 @@
-import { Form, Input, Select, DatePicker, message } from 'antd';
+import { useState, useEffect } from 'react';
+import { Form, Input, Select, DatePicker, message, Tag } from 'antd';
 import { useRouter } from 'next/router';
 import dayjs, { type Dayjs } from 'dayjs';
 import RichTextEditor from '@/components/common/RichTextEditor';
 import type { Article, ArticleFormData } from '@/types/article';
+import type { Tag as TagType } from '@/types/tag';
 import { fetchWithAuth } from '@/lib/api';
 
 interface ArticleFormProps {
@@ -17,11 +19,41 @@ interface ArticleFormValues {
   createdAt: Dayjs;
   importance: ArticleFormData['importance'];
   content: string;
+  tagIds?: string[];
 }
 
 export default function ArticleForm({ initialValues, mode, formId }: ArticleFormProps) {
   const router = useRouter();
   const [form] = Form.useForm<ArticleFormValues>();
+  const [tags, setTags] = useState<TagType[]>([]);
+  const [tagsLoading, setTagsLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchTags = async () => {
+      setTagsLoading(true);
+      try {
+        const response = await fetchWithAuth('/api/tags?all=true');
+        const result = await response.json();
+        if (result.success) {
+          setTags(result.data);
+        }
+      } catch (error) {
+        console.error('获取标签列表失败:', error);
+      } finally {
+        setTagsLoading(false);
+      }
+    };
+    void fetchTags();
+  }, []);
+
+  const tagOptions = tags.map((tag) => ({
+    value: tag.id,
+    label: (
+      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <Tag color={tag.color}>{tag.name}</Tag>
+      </span>
+    ),
+  }));
 
   const onFinish = async (values: ArticleFormValues) => {
     try {
@@ -31,6 +63,7 @@ export default function ArticleForm({ initialValues, mode, formId }: ArticleForm
         createdAt: values.createdAt.toDate().toISOString(),
         importance: values.importance,
         content: values.content,
+        tagIds: values.tagIds,
       };
 
       const url = mode === 'create'
@@ -61,6 +94,13 @@ export default function ArticleForm({ initialValues, mode, formId }: ArticleForm
     }
   };
 
+  const getInitialTagIds = () => {
+    if (initialValues?.tags) {
+      return initialValues.tags.map((tag) => tag.id);
+    }
+    return undefined;
+  };
+
   return (
     <Form
       id={formId}
@@ -72,6 +112,7 @@ export default function ArticleForm({ initialValues, mode, formId }: ArticleForm
           ? {
               ...initialValues,
               createdAt: dayjs(initialValues.createdAt),
+              tagIds: getInitialTagIds(),
             }
           : {
               importance: 'medium',
@@ -120,6 +161,21 @@ export default function ArticleForm({ initialValues, mode, formId }: ArticleForm
             { value: 'medium', label: '中' },
             { value: 'high', label: '高' },
           ]}
+        />
+      </Form.Item>
+
+      <Form.Item
+        label="标签"
+        name="tagIds"
+      >
+        <Select
+          mode="multiple"
+          placeholder="请选择标签（可多选）"
+          loading={tagsLoading}
+          options={tagOptions}
+          style={{ width: '100%' }}
+          maxTagCount="responsive"
+          allowClear
         />
       </Form.Item>
 

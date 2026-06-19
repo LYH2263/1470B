@@ -1,3 +1,5 @@
+import type { Tag } from './tag';
+
 // 文章数据类型定义
 
 export interface Article {
@@ -8,6 +10,7 @@ export interface Article {
   importance: 'low' | 'medium' | 'high';         // 重要性等级
   views: number;                                 // 阅读数
   content: string;                               // 富文本内容（HTML）
+  tags?: Tag[];                                  // 关联的标签
 }
 
 export interface ArticleFormData {
@@ -16,12 +19,14 @@ export interface ArticleFormData {
   createdAt: string;
   importance: 'low' | 'medium' | 'high';
   content: string;
+  tagIds?: string[];                             // 标签ID数组
 }
 
 export interface ArticleListQuery {
   page: number;                                  // 当前页码
   pageSize: number;                              // 每页条数
   keyword?: string;                              // 搜索关键词
+  tagId?: string;                                // 按标签筛选
 }
 
 export interface ArticleListResponse {

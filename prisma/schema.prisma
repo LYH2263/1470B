@@ -23,19 +23,45 @@ model User {
 }
 
 model Article {
-  id         String   @id @default(uuid())
+  id         String        @id @default(uuid())
   title      String
-  author     String   // 作者名称（字符串）
-  createdAt  DateTime @default(now())
-  importance String   // 'low', 'medium', 'high'
-  views      Int      @default(0)
-  content    String   // 富文本内容（HTML）
-  updatedAt  DateTime @updatedAt
+  author     String        // 作者名称（字符串）
+  createdAt  DateTime      @default(now())
+  importance String        // 'low', 'medium', 'high'
+  views      Int           @default(0)
+  content    String        // 富文本内容（HTML）
+  updatedAt  DateTime      @updatedAt
   comments   Comment[]
+  tags       ArticleTag[]
 
   @@index([title])
   @@index([createdAt])
   @@index([author])
+}
+
+model Tag {
+  id          String        @id @default(uuid())
+  name        String        @unique
+  color       String        @default("#1890ff")
+  description String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  articles    ArticleTag[]
+
+  @@index([name])
+}
+
+model ArticleTag {
+  id        String   @id @default(uuid())
+  articleId String
+  tagId     String
+  createdAt DateTime @default(now())
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([articleId, tagId])
+  @@index([articleId])
+  @@index([tagId])
 }
 
 model Comment {

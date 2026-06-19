@@ -36,6 +36,7 @@ describe('Storage Layer - 数据正确性测试', () => {
       const mockPrismaArticles = mockArticles.map((article) => ({
         ...article,
         createdAt: new Date(article.createdAt),
+        updatedAt: new Date(),
       }));
 
       vi.mocked(prisma.article.count).mockResolvedValue(50);
@@ -58,6 +59,7 @@ describe('Storage Layer - 数据正确性测试', () => {
       const mockPrismaArticle = {
         ...mockArticle,
         createdAt: new Date(mockArticle.createdAt),
+        updatedAt: new Date(),
       };
 
       vi.mocked(prisma.article.count).mockResolvedValue(1);
@@ -147,6 +149,7 @@ describe('Storage Layer - 数据正确性测试', () => {
       const mockPrismaArticle = {
         ...mockArticle,
         createdAt: new Date(mockArticle.createdAt),
+        updatedAt: new Date(),
       };
 
       vi.mocked(prisma.article.findUnique).mockResolvedValue(mockPrismaArticle);
@@ -167,6 +170,7 @@ describe('Storage Layer - 数据正确性测试', () => {
       const mockPrismaArticle = {
         ...mockArticle,
         createdAt: new Date(mockArticle.createdAt),
+        updatedAt: new Date(),
       };
 
       vi.mocked(prisma.article.findUnique).mockResolvedValue(mockPrismaArticle);
@@ -204,6 +208,7 @@ describe('Storage Layer - 数据正确性测试', () => {
       const mockPrismaArticle = {
         ...mockArticle,
         createdAt: new Date(mockArticle.createdAt),
+        updatedAt: new Date(),
       };
 
       vi.mocked(prisma.article.create).mockResolvedValue(mockPrismaArticle);
@@ -223,6 +228,7 @@ describe('Storage Layer - 数据正确性测试', () => {
       const mockPrismaArticle = {
         ...mockArticle,
         createdAt: new Date(mockArticle.createdAt),
+        updatedAt: new Date(),
       };
 
       vi.mocked(prisma.article.create).mockResolvedValue(mockPrismaArticle);
@@ -238,6 +244,7 @@ describe('Storage Layer - 数据正确性测试', () => {
       const mockPrismaArticle = {
         ...mockArticle,
         createdAt: new Date(mockArticle.createdAt),
+        updatedAt: new Date(),
       };
 
       vi.mocked(prisma.article.create).mockResolvedValue(mockPrismaArticle);
@@ -265,6 +272,7 @@ describe('Storage Layer - 数据正确性测试', () => {
       const mockPrismaArticle = {
         ...mockArticle,
         createdAt: new Date(mockArticle.createdAt),
+        updatedAt: new Date(),
       };
 
       vi.mocked(prisma.article.create).mockResolvedValue(mockPrismaArticle);
@@ -294,6 +302,7 @@ describe('Storage Layer - 数据正确性测试', () => {
       const mockPrismaArticle = {
         ...mockArticle,
         createdAt: new Date(mockArticle.createdAt),
+        updatedAt: new Date(),
       };
 
       vi.mocked(prisma.article.update).mockResolvedValue(mockPrismaArticle);
@@ -341,6 +350,7 @@ describe('Storage Layer - 数据正确性测试', () => {
       const mockPrismaArticle = {
         ...mockArticle,
         createdAt: new Date(mockArticle.createdAt),
+        updatedAt: new Date(),
       };
 
       vi.mocked(prisma.article.update).mockResolvedValue(mockPrismaArticle);
@@ -421,6 +431,7 @@ describe('Storage Layer - 数据正确性测试', () => {
       const mockPrismaArticle = {
         ...mockArticle,
         createdAt: new Date(mockArticle.createdAt),
+        updatedAt: new Date(),
       };
 
       vi.mocked(prisma.article.create).mockResolvedValue(mockPrismaArticle);
@@ -441,6 +452,7 @@ describe('Storage Layer - 数据正确性测试', () => {
       const mockPrismaArticle = {
         ...mockArticle,
         createdAt: new Date(mockArticle.createdAt),
+        updatedAt: new Date(),
       };
 
       vi.mocked(prisma.article.findUnique).mockResolvedValue(mockPrismaArticle);

@@ -1,6 +1,6 @@
 import type { NextApiResponse } from 'next';
-import { getArticleById, updateArticle, deleteArticles } from '@/lib/storage';
-import { ArticleWithTagsSchema } from '@/lib/validation';
+import { getTagById, updateTag, deleteTags } from '@/lib/storage';
+import { TagSchema } from '@/lib/validation';
 import type { ApiResponse } from '@/types/article';
 import { withAuth, type AuthenticatedRequest } from '@/lib/middleware';
 
@@ -13,49 +13,47 @@ async function handler(
   if (typeof id !== 'string') {
     return res.status(400).json({
       success: false,
-      error: '无效的文章 ID',
+      error: '无效的标签 ID',
     });
   }
 
-  // 验证 ID 格式（UUID）
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!uuidRegex.test(id)) {
     return res.status(400).json({
       success: false,
-      error: '无效的文章 ID 格式',
+      error: '无效的标签 ID 格式',
     });
   }
 
   if (req.method === 'GET') {
-    // 获取文章详情
+    // 获取标签详情
     try {
-      const article = await getArticleById(id);
+      const tag = await getTagById(id);
 
-      if (!article) {
+      if (!tag) {
         return res.status(404).json({
           success: false,
-          error: '文章不存在',
+          error: '标签不存在',
         });
       }
 
       return res.status(200).json({
         success: true,
-        data: article,
+        data: tag,
       });
     } catch (error) {
-      console.error('获取文章详情失败:', error);
+      console.error('获取标签详情失败:', error);
       return res.status(500).json({
         success: false,
-        error: '获取文章详情失败',
+        error: '获取标签详情失败',
       });
     }
   } else if (req.method === 'PUT') {
-    // 更新文章
+    // 更新标签
     try {
       const body = req.body;
 
-      // 数据验证
-      const validationResult = ArticleWithTagsSchema.safeParse(body);
+      const validationResult = TagSchema.safeParse(body);
       if (!validationResult.success) {
         return res.status(400).json({
           success: false,
@@ -63,40 +61,40 @@ async function handler(
         });
       }
 
-      const article = await updateArticle(id, validationResult.data);
+      const tag = await updateTag(id, validationResult.data);
 
-      if (!article) {
+      if (!tag) {
         return res.status(404).json({
           success: false,
-          error: '文章不存在',
+          error: '标签不存在',
         });
       }
 
       return res.status(200).json({
         success: true,
-        data: article,
+        data: tag,
       });
     } catch (error) {
-      console.error('更新文章失败:', error);
+      console.error('更新标签失败:', error);
       return res.status(500).json({
         success: false,
-        error: '更新文章失败',
+        error: '更新标签失败',
       });
     }
   } else if (req.method === 'DELETE') {
-    // 删除文章
+    // 删除标签
     try {
-      const deletedCount = await deleteArticles([id]);
+      const deletedCount = await deleteTags([id]);
 
       return res.status(200).json({
         success: true,
         data: { deletedCount },
       });
     } catch (error) {
-      console.error('删除文章失败:', error);
+      console.error('删除标签失败:', error);
       return res.status(500).json({
         success: false,
-        error: '删除文章失败',
+        error: '删除标签失败',
       });
     }
   } else {

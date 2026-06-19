@@ -1,18 +1,27 @@
 import type { NextApiResponse } from 'next';
-import { getArticles, createArticle, deleteArticles } from '@/lib/storage';
-import { ArticleWithTagsSchema } from '@/lib/validation';
+import { getTags, createTag, deleteTags, getAllTags } from '@/lib/storage';
+import { TagSchema } from '@/lib/validation';
 import type { ApiResponse } from '@/types/article';
-import { PAGINATION, SEARCH } from '@/lib/constants';
 import { withAuth, type AuthenticatedRequest } from '@/lib/middleware';
+import { PAGINATION, SEARCH } from '@/lib/constants';
 
 async function handler(
   req: AuthenticatedRequest,
   res: NextApiResponse<ApiResponse>
 ) {
   if (req.method === 'GET') {
-    // 获取文章列表
+    // 获取标签列表
     try {
-      // 输入验证和清理
+      const { all } = req.query;
+
+      if (all === 'true') {
+        const tags = await getAllTags();
+        return res.status(200).json({
+          success: true,
+          data: tags,
+        });
+      }
+
       const rawPage = typeof req.query.page === 'string' ? parseInt(req.query.page, 10) : NaN;
       const rawPageSize = typeof req.query.pageSize === 'string' ? parseInt(req.query.pageSize, 10) : NaN;
 
@@ -28,36 +37,31 @@ async function handler(
         )
       );
 
-      // 清理和限制关键词长度
       const keyword = req.query.keyword
         ? (req.query.keyword as string)
             .trim()
             .slice(0, SEARCH.MAX_KEYWORD_LENGTH)
         : undefined;
 
-      // 标签筛选
-      const tagId = typeof req.query.tagId === 'string' ? req.query.tagId : undefined;
-
-      const result = await getArticles({ page, pageSize, keyword, tagId });
+      const result = await getTags({ page, pageSize, keyword });
 
       return res.status(200).json({
         success: true,
         data: result,
       });
     } catch (error) {
-      console.error('获取文章列表失败:', error);
+      console.error('获取标签列表失败:', error);
       return res.status(500).json({
         success: false,
-        error: '获取文章列表失败',
+        error: '获取标签列表失败',
       });
     }
   } else if (req.method === 'POST') {
-    // 创建文章
+    // 创建标签
     try {
       const body = req.body;
 
-      // 数据验证
-      const validationResult = ArticleWithTagsSchema.safeParse(body);
+      const validationResult = TagSchema.safeParse(body);
       if (!validationResult.success) {
         return res.status(400).json({
           success: false,
@@ -65,53 +69,52 @@ async function handler(
         });
       }
 
-      const article = await createArticle(validationResult.data);
+      const tag = await createTag(validationResult.data);
 
       return res.status(200).json({
         success: true,
-        data: article,
+        data: tag,
       });
     } catch (error) {
-      console.error('创建文章失败:', error);
+      console.error('创建标签失败:', error);
       return res.status(500).json({
         success: false,
-        error: '创建文章失败',
+        error: '创建标签失败',
       });
     }
   } else if (req.method === 'DELETE') {
-    // 批量删除文章
+    // 批量删除标签
     try {
       const { ids } = req.body;
 
       if (!Array.isArray(ids) || ids.length === 0) {
         return res.status(400).json({
           success: false,
-          error: '请提供要删除的文章 ID',
+          error: '请提供要删除的标签 ID',
         });
       }
 
-      // 验证 ID 格式（UUID）
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       const validIds = ids.filter((id) => typeof id === 'string' && uuidRegex.test(id));
 
       if (validIds.length === 0) {
         return res.status(400).json({
           success: false,
-          error: '无效的文章 ID 格式',
+          error: '无效的标签 ID 格式',
         });
       }
 
-      const deletedCount = await deleteArticles(validIds);
+      const deletedCount = await deleteTags(validIds);
 
       return res.status(200).json({
         success: true,
         data: { deletedCount },
       });
     } catch (error) {
-      console.error('删除文章失败:', error);
+      console.error('删除标签失败:', error);
       return res.status(500).json({
         success: false,
-        error: '删除文章失败',
+        error: '删除标签失败',
       });
     }
   } else {

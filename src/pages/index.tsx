@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Table, Button, Input, Space, Modal, message, Tag, Card } from 'antd';
+import { Table, Button, Input, Space, Modal, message, Tag, Card, Select } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/router';
 import type { Article, ArticleListResponse } from '@/types/article';
+import type { Tag as TagType } from '@/types/tag';
 import { formatDate, importanceMap } from '@/lib/utils';
 import MainLayout from '@/components/layout/MainLayout';
 import { fetchWithAuth } from '@/lib/api';
@@ -17,7 +18,28 @@ export default function ArticlesPage() {
   const [pageSize] = useState(10);
   const [keyword, setKeyword] = useState('');
   const [searchInput, setSearchInput] = useState('');
+  const [tagId, setTagId] = useState<string | undefined>();
+  const [tags, setTags] = useState<TagType[]>([]);
+  const [tagsLoading, setTagsLoading] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+
+  useEffect(() => {
+    const fetchTags = async () => {
+      setTagsLoading(true);
+      try {
+        const response = await fetchWithAuth('/api/tags?all=true');
+        const result = await response.json();
+        if (result.success) {
+          setTags(result.data);
+        }
+      } catch (error) {
+        console.error('获取标签列表失败:', error);
+      } finally {
+        setTagsLoading(false);
+      }
+    };
+    void fetchTags();
+  }, []);
 
   // 获取文章列表
   const fetchArticles = useCallback(async () => {
@@ -27,6 +49,7 @@ export default function ArticlesPage() {
         page: String(page),
         pageSize: String(pageSize),
         ...(keyword && { keyword }),
+        ...(tagId && { tagId }),
       });
 
       const response = await fetchWithAuth(`/api/articles?${params}`);
@@ -45,7 +68,7 @@ export default function ArticlesPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, keyword]);
+  }, [page, pageSize, keyword, tagId]);
 
   useEffect(() => {
     void fetchArticles();
@@ -61,6 +84,12 @@ export default function ArticlesPage() {
   const handleReset = () => {
     setSearchInput('');
     setKeyword('');
+    setTagId(undefined);
+    setPage(1);
+  };
+
+  const handleTagFilterChange = (value: string | undefined) => {
+    setTagId(value);
     setPage(1);
   };
 
@@ -132,6 +161,15 @@ export default function ArticlesPage() {
     });
   };
 
+  const tagOptions = tags.map((tag) => ({
+    value: tag.id,
+    label: (
+      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <Tag color={tag.color}>{tag.name}</Tag>
+      </span>
+    ),
+  }));
+
   // 表格列定义
   const columns: TableProps<Article>['columns'] = [
     {
@@ -151,6 +189,24 @@ export default function ArticlesPage() {
       dataIndex: 'author',
       key: 'author',
       width: 120,
+    },
+    {
+      title: '标签',
+      dataIndex: 'tags',
+      key: 'tags',
+      width: 200,
+      render: (tags: Article['tags']) => {
+        if (!tags || tags.length === 0) return '-';
+        return (
+          <Space wrap size={[4, 4]}>
+            {tags.map((tag) => (
+              <Tag key={tag.id} color={tag.color}>
+                {tag.name}
+              </Tag>
+            ))}
+          </Space>
+        );
+      },
     },
     {
       title: '创建时间',
@@ -204,14 +260,23 @@ export default function ArticlesPage() {
       <div style={{ padding: '24px' }}>
         <Card>
           <div style={{ marginBottom: '16px' }}>
-            <Space>
+            <Space wrap>
               <Input
                 placeholder="搜索标题"
                 allowClear
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onPressEnter={handleSearch}
-                style={{ width: 300 }}
+                style={{ width: 220 }}
+              />
+              <Select
+                placeholder="按标签筛选"
+                allowClear
+                loading={tagsLoading}
+                options={tagOptions}
+                value={tagId}
+                onChange={handleTagFilterChange}
+                style={{ width: 220 }}
               />
               <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
                 搜索
