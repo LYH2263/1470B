@@ -73,6 +73,7 @@ export type TagInput = z.infer<typeof TagSchema>;
 
 export const ArticleWithTagsSchema = ArticleSchema.extend({
   tagIds: z.array(z.string().uuid('标签ID格式不正确')).optional(),
+  reviewStatus: z.enum(['pending_review', 'approved', 'rejected']).optional(),
 });
 
 export type ArticleWithTagsInput = z.infer<typeof ArticleWithTagsSchema>;

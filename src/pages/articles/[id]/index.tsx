@@ -10,6 +10,12 @@ import type { Comment, CommentFormData } from '@/types/comment';
 import { formatDate, importanceMap } from '@/lib/utils';
 import { fetchWithAuth } from '@/lib/api';
 
+const reviewStatusMap: Record<string, { label: string; color: string }> = {
+  pending_review: { label: '待审核', color: 'warning' },
+  approved: { label: '已通过', color: 'success' },
+  rejected: { label: '已驳回', color: 'error' },
+};
+
 export default function ArticleDetailPage() {
   const router = useRouter();
   const { id } = router.query;
@@ -157,7 +163,17 @@ export default function ArticleDetailPage() {
             <Descriptions.Item label="重要性">
               <Tag color={importanceConfig.color}>{importanceConfig.label}</Tag>
             </Descriptions.Item>
+            <Descriptions.Item label="审核状态">
+              <Tag color={reviewStatusMap[article.reviewStatus]?.color}>
+                {reviewStatusMap[article.reviewStatus]?.label}
+              </Tag>
+            </Descriptions.Item>
             <Descriptions.Item label="阅读数">{article.views}</Descriptions.Item>
+            {article.reviewStatus === 'rejected' && article.rejectReason && (
+              <Descriptions.Item label="驳回理由" span={2}>
+                <span style={{ color: '#ff4d4f' }}>{article.rejectReason}</span>
+              </Descriptions.Item>
+            )}
             <Descriptions.Item label="内容" span={2}>
               <div
                 className="article-content"

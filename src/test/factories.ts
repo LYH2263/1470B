@@ -16,6 +16,7 @@ export function createMockArticle(overrides?: Partial<Article>): Article {
     importance: 'medium',
     views: 0,
     content: '<p>这是测试内容</p>',
+    reviewStatus: 'approved',
     ...overrides,
   };
 }

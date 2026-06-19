@@ -22,6 +22,8 @@ function mapArticleToDTO(article: {
   views: number;
   content: string;
   updatedAt?: Date;
+  reviewStatus: string;
+  rejectReason?: string | null;
   tags?: {
     tag: {
       id: string;
@@ -41,6 +43,8 @@ function mapArticleToDTO(article: {
     importance: article.importance as 'low' | 'medium' | 'high',
     views: article.views,
     content: article.content,
+    reviewStatus: article.reviewStatus as 'pending_review' | 'approved' | 'rejected',
+    rejectReason: article.rejectReason ?? undefined,
     tags: article.tags?.map((at) => mapTagToDTO(at.tag)),
   };
 }
@@ -65,7 +69,7 @@ function mapTagToDTO(tag: {
 
 // 获取文章列表（支持分页、搜索和标签筛选）
 export async function getArticles(query: ArticleListQuery): Promise<ArticleListResponse> {
-  const { page, pageSize, keyword, tagId } = query;
+  const { page, pageSize, keyword, tagId, reviewStatus } = query;
 
   const where: Prisma.ArticleWhereInput = {};
 
@@ -83,7 +87,10 @@ export async function getArticles(query: ArticleListQuery): Promise<ArticleListR
     };
   }
 
-  // 获取总数和分页数据（并行执行）
+  if (reviewStatus) {
+    where.reviewStatus = reviewStatus;
+  }
+
   const [total, articles] = await Promise.all([
     prisma.article.count({ where }),
     prisma.article.findMany({
@@ -103,7 +110,6 @@ export async function getArticles(query: ArticleListQuery): Promise<ArticleListR
     }),
   ]);
 
-  // 转换数据格式
   const data = articles.map(mapArticleToDTO);
 
   return {
@@ -144,6 +150,7 @@ export async function createArticle(data: ArticleFormData): Promise<Article> {
       importance: data.importance,
       content: data.content,
       views: 0,
+      reviewStatus: data.reviewStatus || 'pending_review',
       tags: data.tagIds && data.tagIds.length > 0
         ? {
             create: data.tagIds.map((tagId) => ({
@@ -182,6 +189,7 @@ export async function updateArticle(id: string, data: ArticleFormData): Promise<
           createdAt: new Date(data.createdAt),
           importance: data.importance,
           content: data.content,
+          reviewStatus: data.reviewStatus,
           tags: data.tagIds && data.tagIds.length > 0
             ? {
                 create: data.tagIds.map((tagId) => ({

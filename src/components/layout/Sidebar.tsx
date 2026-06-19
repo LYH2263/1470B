@@ -1,13 +1,40 @@
-import { Layout, Menu } from 'antd';
-import { FileTextOutlined, DashboardOutlined, CommentOutlined, TagsOutlined, PictureOutlined } from '@ant-design/icons';
+import { useState, useEffect } from 'react';
+import { Layout, Menu, Badge } from 'antd';
+import { FileTextOutlined, DashboardOutlined, CommentOutlined, TagsOutlined, PictureOutlined, AuditOutlined, BellOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/router';
 import type { MenuProps } from 'antd';
+import { useAuth } from '@/contexts/AuthContext';
+import { fetchWithAuth } from '@/lib/api';
 
 const { Sider } = Layout;
 
 export default function Sidebar() {
   const router = useRouter();
   const pathname = router.pathname;
+  const { user } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchUnread = async () => {
+      try {
+        const response = await fetchWithAuth('/api/notifications?pageSize=1');
+        const result = await response.json();
+        if (result.success) {
+          setUnreadCount(result.data.unreadCount || 0);
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
+  }, [user]);
+
+  const isAdmin = user?.role === 'admin';
 
   const menuItems: MenuProps['items'] = [
     {
@@ -20,6 +47,15 @@ export default function Sidebar() {
       icon: <FileTextOutlined />,
       label: '文章管理',
     },
+    ...(isAdmin
+      ? [
+          {
+            key: '/reviews',
+            icon: <AuditOutlined />,
+            label: '文章审核',
+          },
+        ]
+      : []),
     {
       key: '/media',
       icon: <PictureOutlined />,
@@ -34,6 +70,15 @@ export default function Sidebar() {
       key: '/comments',
       icon: <CommentOutlined />,
       label: '评论管理',
+    },
+    {
+      key: '/notifications',
+      icon: (
+        <Badge count={unreadCount} size="small" offset={[6, -2]}>
+          <BellOutlined />
+        </Badge>
+      ),
+      label: '通知',
     },
   ];
 

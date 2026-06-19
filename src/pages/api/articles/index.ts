@@ -11,9 +11,7 @@ async function handler(
   res: NextApiResponse<ApiResponse>
 ) {
   if (req.method === 'GET') {
-    // 获取文章列表
     try {
-      // 输入验证和清理
       const rawPage = typeof req.query.page === 'string' ? parseInt(req.query.page, 10) : NaN;
       const rawPageSize = typeof req.query.pageSize === 'string' ? parseInt(req.query.pageSize, 10) : NaN;
 
@@ -29,17 +27,17 @@ async function handler(
         )
       );
 
-      // 清理和限制关键词长度
       const keyword = req.query.keyword
         ? (req.query.keyword as string)
             .trim()
             .slice(0, SEARCH.MAX_KEYWORD_LENGTH)
         : undefined;
 
-      // 标签筛选
       const tagId = typeof req.query.tagId === 'string' ? req.query.tagId : undefined;
 
-      const result = await getArticles({ page, pageSize, keyword, tagId });
+      const reviewStatus = typeof req.query.reviewStatus === 'string' ? req.query.reviewStatus : undefined;
+
+      const result = await getArticles({ page, pageSize, keyword, tagId, reviewStatus });
 
       return res.status(200).json({
         success: true,
@@ -53,11 +51,9 @@ async function handler(
       });
     }
   } else if (req.method === 'POST') {
-    // 创建文章
     try {
       const body = req.body;
 
-      // 数据验证
       const validationResult = ArticleWithTagsSchema.safeParse(body);
       if (!validationResult.success) {
         return res.status(400).json({
@@ -66,7 +62,15 @@ async function handler(
         });
       }
 
-      const article = await createArticle(validationResult.data);
+      const userRole = req.user?.role || 'editor';
+      const articleData = {
+        ...validationResult.data,
+        reviewStatus: userRole === 'admin' && validationResult.data.reviewStatus === 'approved'
+          ? 'approved' as const
+          : 'pending_review' as const,
+      };
+
+      const article = await createArticle(articleData);
 
       const modifiedBy = req.user?.username || 'system';
       const summary = await generateChangeSummary(article.id, validationResult.data.title, validationResult.data.content);
@@ -92,7 +96,6 @@ async function handler(
       });
     }
   } else if (req.method === 'DELETE') {
-    // 批量删除文章
     try {
       const { ids } = req.body;
 
@@ -103,7 +106,6 @@ async function handler(
         });
       }
 
-      // 验证 ID 格式（UUID）
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       const validIds = ids.filter((id) => typeof id === 'string' && uuidRegex.test(id));
 

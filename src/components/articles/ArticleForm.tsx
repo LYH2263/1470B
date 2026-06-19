@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Form, Input, Select, DatePicker, message, Tag } from 'antd';
+import { Form, Input, Select, DatePicker, message, Tag, Button, Space } from 'antd';
+import { SendOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/router';
 import dayjs, { type Dayjs } from 'dayjs';
 import RichTextEditor from '@/components/common/RichTextEditor';
 import type { Article, ArticleFormData } from '@/types/article';
 import type { Tag as TagType } from '@/types/tag';
 import { fetchWithAuth } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ArticleFormProps {
   initialValues?: Article;
@@ -27,6 +29,8 @@ export default function ArticleForm({ initialValues, mode, formId }: ArticleForm
   const [form] = Form.useForm<ArticleFormValues>();
   const [tags, setTags] = useState<TagType[]>([]);
   const [tagsLoading, setTagsLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchTags = async () => {
@@ -55,7 +59,8 @@ export default function ArticleForm({ initialValues, mode, formId }: ArticleForm
     ),
   }));
 
-  const onFinish = async (values: ArticleFormValues) => {
+  const onSubmit = async (values: ArticleFormValues, reviewStatus?: ArticleFormData['reviewStatus']) => {
+    setSubmitting(true);
     try {
       const formData: ArticleFormData = {
         title: values.title,
@@ -64,6 +69,7 @@ export default function ArticleForm({ initialValues, mode, formId }: ArticleForm
         importance: values.importance,
         content: values.content,
         tagIds: values.tagIds,
+        reviewStatus,
       };
 
       const url = mode === 'create'
@@ -91,6 +97,22 @@ export default function ArticleForm({ initialValues, mode, formId }: ArticleForm
     } catch (error) {
       console.error('提交失败:', error);
       message.error('操作失败');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const onFinish = async (values: ArticleFormValues) => {
+    const isAdmin = user?.role === 'admin';
+    await onSubmit(values, isAdmin ? 'approved' : 'pending_review');
+  };
+
+  const handleSubmitForReview = async () => {
+    try {
+      const values = await form.validateFields();
+      await onSubmit(values, 'pending_review');
+    } catch {
+      // validation errors are shown by form
     }
   };
 
@@ -100,6 +122,8 @@ export default function ArticleForm({ initialValues, mode, formId }: ArticleForm
     }
     return undefined;
   };
+
+  const isAdmin = user?.role === 'admin';
 
   return (
     <Form
@@ -186,6 +210,23 @@ export default function ArticleForm({ initialValues, mode, formId }: ArticleForm
       >
         <RichTextEditor placeholder="请输入文章内容" />
       </Form.Item>
+
+      {!isAdmin && (
+        <Form.Item>
+          <Space>
+            <Button type="primary" htmlType="submit" loading={submitting}>
+              保存并提交审核
+            </Button>
+            <Button
+              icon={<SendOutlined />}
+              onClick={handleSubmitForReview}
+              loading={submitting}
+            >
+              提交审核
+            </Button>
+          </Space>
+        </Form.Item>
+      )}
     </Form>
   );
 }

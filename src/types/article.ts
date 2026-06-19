@@ -3,14 +3,16 @@ import type { Tag } from './tag';
 // 文章数据类型定义
 
 export interface Article {
-  id: string;                                    // 唯一标识符（UUID）
-  title: string;                                 // 标题（必填）
-  author: string;                                // 作者名称（必填）
-  createdAt: string;                             // 创建时间（ISO 8601 格式）
-  importance: 'low' | 'medium' | 'high';         // 重要性等级
-  views: number;                                 // 阅读数
-  content: string;                               // 富文本内容（HTML）
-  tags?: Tag[];                                  // 关联的标签
+  id: string;
+  title: string;
+  author: string;
+  createdAt: string;
+  importance: 'low' | 'medium' | 'high';
+  views: number;
+  content: string;
+  reviewStatus: 'pending_review' | 'approved' | 'rejected';
+  rejectReason?: string;
+  tags?: Tag[];
 }
 
 export interface ArticleFormData {
@@ -19,14 +21,16 @@ export interface ArticleFormData {
   createdAt: string;
   importance: 'low' | 'medium' | 'high';
   content: string;
-  tagIds?: string[];                             // 标签ID数组
+  tagIds?: string[];
+  reviewStatus?: 'pending_review' | 'approved' | 'rejected';
 }
 
 export interface ArticleListQuery {
-  page: number;                                  // 当前页码
-  pageSize: number;                              // 每页条数
-  keyword?: string;                              // 搜索关键词
-  tagId?: string;                                // 按标签筛选
+  page: number;
+  pageSize: number;
+  keyword?: string;
+  tagId?: string;
+  reviewStatus?: string;
 }
 
 export interface ArticleListResponse {

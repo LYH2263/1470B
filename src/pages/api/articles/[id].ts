@@ -18,7 +18,6 @@ async function handler(
     });
   }
 
-  // 验证 ID 格式（UUID）
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!uuidRegex.test(id)) {
     return res.status(400).json({
@@ -28,7 +27,6 @@ async function handler(
   }
 
   if (req.method === 'GET') {
-    // 获取文章详情
     try {
       const article = await getArticleById(id);
 
@@ -51,11 +49,9 @@ async function handler(
       });
     }
   } else if (req.method === 'PUT') {
-    // 更新文章
     try {
       const body = req.body;
 
-      // 数据验证
       const validationResult = ArticleWithTagsSchema.safeParse(body);
       if (!validationResult.success) {
         return res.status(400).json({
@@ -64,7 +60,24 @@ async function handler(
         });
       }
 
-      const article = await updateArticle(id, validationResult.data);
+      const userRole = req.user?.role || 'editor';
+      const existingArticle = await getArticleById(id);
+      if (!existingArticle) {
+        return res.status(404).json({
+          success: false,
+          error: '文章不存在',
+        });
+      }
+
+      let reviewStatus = existingArticle.reviewStatus;
+      if (userRole !== 'admin') {
+        reviewStatus = 'pending_review';
+      }
+
+      const article = await updateArticle(id, {
+        ...validationResult.data,
+        reviewStatus,
+      });
 
       if (!article) {
         return res.status(404).json({
@@ -97,7 +110,6 @@ async function handler(
       });
     }
   } else if (req.method === 'DELETE') {
-    // 删除文章
     try {
       const deletedCount = await deleteArticles([id]);
 

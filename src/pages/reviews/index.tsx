@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Table, Button, Input, Space, Modal, message, Tag, Card, Select } from 'antd';
-import { SearchOutlined } from '@ant-design/icons';
+import { Table, Button, Input, Space, Modal, message, Tag, Card, Select, InputNumber } from 'antd';
+import { SearchOutlined, CheckOutlined, CloseOutlined, EyeOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/router';
 import type { Article, ArticleListResponse } from '@/types/article';
-import type { Tag as TagType } from '@/types/tag';
 import { formatDate, importanceMap } from '@/lib/utils';
 import MainLayout from '@/components/layout/MainLayout';
 import { fetchWithAuth } from '@/lib/api';
@@ -16,7 +15,7 @@ const reviewStatusMap: Record<string, { label: string; color: string }> = {
   rejected: { label: '已驳回', color: 'error' },
 };
 
-export default function ArticlesPage() {
+export default function ReviewsPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -26,42 +25,19 @@ export default function ArticlesPage() {
   const [pageSize] = useState(10);
   const [keyword, setKeyword] = useState('');
   const [searchInput, setSearchInput] = useState('');
-  const [tagId, setTagId] = useState<string | undefined>();
-  const [tags, setTags] = useState<TagType[]>([]);
-  const [tagsLoading, setTagsLoading] = useState(false);
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-  const [reviewStatusFilter, setReviewStatusFilter] = useState<string | undefined>(undefined);
+  const [statusFilter, setStatusFilter] = useState<string>('pending_review');
 
-  useEffect(() => {
-    const fetchTags = async () => {
-      setTagsLoading(true);
-      try {
-        const response = await fetchWithAuth('/api/tags?all=true');
-        const result = await response.json();
-        if (result.success) {
-          setTags(result.data);
-        }
-      } catch (error) {
-        console.error('获取标签列表失败:', error);
-      } finally {
-        setTagsLoading(false);
-      }
-    };
-    void fetchTags();
-  }, []);
-
-  const fetchArticles = useCallback(async () => {
+  const fetchReviews = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
         page: String(page),
         pageSize: String(pageSize),
         ...(keyword && { keyword }),
-        ...(tagId && { tagId }),
-        ...(reviewStatusFilter && { reviewStatus: reviewStatusFilter }),
+        ...(statusFilter && { status: statusFilter }),
       });
 
-      const response = await fetchWithAuth(`/api/articles?${params}`);
+      const response = await fetchWithAuth(`/api/articles/reviews?${params}`);
       const result = await response.json();
 
       if (result.success) {
@@ -77,11 +53,15 @@ export default function ArticlesPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, keyword, tagId, reviewStatusFilter]);
+  }, [page, pageSize, keyword, statusFilter]);
 
   useEffect(() => {
-    void fetchArticles();
-  }, [fetchArticles]);
+    if (user?.role !== 'admin') {
+      router.replace('/');
+      return;
+    }
+    void fetchReviews();
+  }, [fetchReviews, user, router]);
 
   const handleSearch = () => {
     setKeyword(searchInput.trim());
@@ -91,95 +71,89 @@ export default function ArticlesPage() {
   const handleReset = () => {
     setSearchInput('');
     setKeyword('');
-    setTagId(undefined);
-    setReviewStatusFilter(undefined);
+    setStatusFilter('pending_review');
     setPage(1);
   };
 
-  const handleTagFilterChange = (value: string | undefined) => {
-    setTagId(value);
-    setPage(1);
-  };
-
-  const handleReviewStatusFilterChange = (value: string | undefined) => {
-    setReviewStatusFilter(value);
-    setPage(1);
-  };
-
-  const handleDelete = (id: string) => {
+  const handleApprove = (id: string) => {
     Modal.confirm({
-      title: '确认删除',
-      content: '确定要删除这篇文章吗？',
+      title: '确认通过',
+      content: '确定要通过这篇文章的审核吗？',
       onOk: async () => {
         try {
-          const response = await fetchWithAuth('/api/articles', {
-            method: 'DELETE',
+          const response = await fetchWithAuth('/api/articles/reviews', {
+            method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ ids: [id] }),
+            body: JSON.stringify({ articleId: id, action: 'approve' }),
           });
 
           const result = await response.json();
 
           if (result.success) {
-            message.success('删除成功');
-            fetchArticles();
+            message.success('审核通过');
+            fetchReviews();
           } else {
-            message.error(result.error || '删除失败');
+            message.error(result.error || '操作失败');
           }
         } catch (error) {
-          console.error('删除失败:', error);
-          message.error('删除失败');
+          console.error('操作失败:', error);
+          message.error('操作失败');
         }
       },
     });
   };
 
-  const handleBatchDelete = () => {
-    if (selectedRowKeys.length === 0) {
-      message.warning('请选择要删除的文章');
-      return;
-    }
+  const handleReject = (id: string, title: string) => {
+    let rejectReason = '';
 
     Modal.confirm({
-      title: '确认删除',
-      content: `确定要删除选中的 ${selectedRowKeys.length} 篇文章吗？`,
+      title: `驳回文章：${title}`,
+      content: (
+        <div>
+          <p style={{ marginBottom: 8 }}>请填写驳回理由：</p>
+          <Input.TextArea
+            id="reject-reason-input"
+            rows={3}
+            maxLength={500}
+            placeholder="请输入驳回理由（必填）"
+            onChange={(e) => {
+              rejectReason = e.target.value;
+            }}
+          />
+        </div>
+      ),
       onOk: async () => {
+        if (!rejectReason.trim()) {
+          message.error('驳回理由不能为空');
+          return Promise.reject();
+        }
+
         try {
-          const response = await fetchWithAuth('/api/articles', {
-            method: 'DELETE',
+          const response = await fetchWithAuth('/api/articles/reviews', {
+            method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ ids: selectedRowKeys }),
+            body: JSON.stringify({ articleId: id, action: 'reject', reason: rejectReason.trim() }),
           });
 
           const result = await response.json();
 
           if (result.success) {
-            message.success('删除成功');
-            setSelectedRowKeys([]);
-            fetchArticles();
+            message.success('已驳回');
+            fetchReviews();
           } else {
-            message.error(result.error || '删除失败');
+            message.error(result.error || '操作失败');
           }
         } catch (error) {
-          console.error('删除失败:', error);
-          message.error('删除失败');
+          console.error('操作失败:', error);
+          message.error('操作失败');
         }
       },
     });
   };
-
-  const tagOptions = tags.map((tag) => ({
-    value: tag.id,
-    label: (
-      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Tag color={tag.color}>{tag.name}</Tag>
-      </span>
-    ),
-  }));
 
   const columns: TableProps<Article>['columns'] = [
     {
@@ -201,24 +175,6 @@ export default function ArticlesPage() {
       width: 120,
     },
     {
-      title: '标签',
-      dataIndex: 'tags',
-      key: 'tags',
-      width: 200,
-      render: (tags: Article['tags']) => {
-        if (!tags || tags.length === 0) return '-';
-        return (
-          <Space wrap size={[4, 4]}>
-            {tags.map((tag) => (
-              <Tag key={tag.id} color={tag.color}>
-                {tag.name}
-              </Tag>
-            ))}
-          </Space>
-        );
-      },
-    },
-    {
       title: '审核状态',
       dataIndex: 'reviewStatus',
       key: 'reviewStatus',
@@ -227,6 +183,14 @@ export default function ArticlesPage() {
         const config = reviewStatusMap[status];
         return config ? <Tag color={config.color}>{config.label}</Tag> : status;
       },
+    },
+    {
+      title: '驳回理由',
+      dataIndex: 'rejectReason',
+      key: 'rejectReason',
+      width: 200,
+      ellipsis: true,
+      render: (text: string) => text || '-',
     },
     {
       title: '创建时间',
@@ -246,39 +210,65 @@ export default function ArticlesPage() {
       },
     },
     {
-      title: '阅读数',
-      dataIndex: 'views',
-      key: 'views',
-      width: 100,
-    },
-    {
       title: '操作',
       key: 'action',
-      width: 200,
+      width: 220,
       render: (_, record) => (
         <Space size="small">
-          <Button type="link" size="small" onClick={() => router.push(`/articles/${record.id}`)}>
-            详情
-          </Button>
           <Button
             type="link"
             size="small"
-            onClick={() => router.push(`/articles/${record.id}/edit`)}
+            icon={<EyeOutlined />}
+            onClick={() => router.push(`/articles/${record.id}`)}
           >
-            编辑
+            查看
           </Button>
-          <Button type="link" size="small" danger onClick={() => handleDelete(record.id)}>
-            删除
-          </Button>
+          {record.reviewStatus === 'pending_review' && (
+            <>
+              <Button
+                type="link"
+                size="small"
+                icon={<CheckOutlined />}
+                style={{ color: '#52c41a' }}
+                onClick={() => handleApprove(record.id)}
+              >
+                通过
+              </Button>
+              <Button
+                type="link"
+                size="small"
+                icon={<CloseOutlined />}
+                danger
+                onClick={() => handleReject(record.id, record.title)}
+              >
+                驳回
+              </Button>
+            </>
+          )}
+          {record.reviewStatus === 'rejected' && (
+            <Button
+              type="link"
+              size="small"
+              icon={<CheckOutlined />}
+              style={{ color: '#52c41a' }}
+              onClick={() => handleApprove(record.id)}
+            >
+              重新通过
+            </Button>
+          )}
         </Space>
       ),
     },
   ];
 
+  if (user?.role !== 'admin') {
+    return null;
+  }
+
   return (
     <MainLayout>
       <div style={{ padding: '24px' }}>
-        <Card>
+        <Card title="文章审核">
           <div style={{ marginBottom: '16px' }}>
             <Space wrap>
               <Input
@@ -290,19 +280,11 @@ export default function ArticlesPage() {
                 style={{ width: 220 }}
               />
               <Select
-                placeholder="按标签筛选"
-                allowClear
-                loading={tagsLoading}
-                options={tagOptions}
-                value={tagId}
-                onChange={handleTagFilterChange}
-                style={{ width: 220 }}
-              />
-              <Select
-                placeholder="审核状态"
-                allowClear
-                value={reviewStatusFilter}
-                onChange={handleReviewStatusFilterChange}
+                value={statusFilter}
+                onChange={(value) => {
+                  setStatusFilter(value);
+                  setPage(1);
+                }}
                 style={{ width: 120 }}
                 options={[
                   { label: '待审核', value: 'pending_review' },
@@ -314,12 +296,6 @@ export default function ArticlesPage() {
                 搜索
               </Button>
               <Button onClick={handleReset}>重置</Button>
-              <Button type="primary" onClick={() => router.push('/articles/create')}>
-                新增
-              </Button>
-              <Button danger onClick={handleBatchDelete} disabled={selectedRowKeys.length === 0}>
-                批量删除
-              </Button>
             </Space>
           </div>
 
@@ -328,10 +304,6 @@ export default function ArticlesPage() {
             columns={columns}
             dataSource={data}
             loading={loading}
-            rowSelection={{
-              selectedRowKeys,
-              onChange: setSelectedRowKeys,
-            }}
             pagination={{
               current: page,
               pageSize,

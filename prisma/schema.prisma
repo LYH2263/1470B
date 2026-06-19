@@ -23,21 +23,24 @@ model User {
 }
 
 model Article {
-  id         String           @id @default(uuid())
-  title      String
-  author     String
-  createdAt  DateTime         @default(now())
-  importance String           // 'low', 'medium', 'high'
-  views      Int              @default(0)
-  content    String           // 富文本内容（HTML）
-  updatedAt  DateTime         @updatedAt
-  comments   Comment[]
-  tags       ArticleTag[]
-  versions   ArticleVersion[]
+  id           String           @id @default(uuid())
+  title        String
+  author       String
+  createdAt    DateTime         @default(now())
+  importance   String           // 'low', 'medium', 'high'
+  views        Int              @default(0)
+  content      String           // 富文本内容（HTML）
+  updatedAt    DateTime         @updatedAt
+  reviewStatus String           @default("pending_review") // 'pending_review', 'approved', 'rejected'
+  rejectReason String?          // 驳回理由
+  comments     Comment[]
+  tags         ArticleTag[]
+  versions     ArticleVersion[]
 
   @@index([title])
   @@index([createdAt])
   @@index([author])
+  @@index([reviewStatus])
 }
 
 model ArticleVersion {
@@ -132,5 +135,20 @@ model MediaFile {
 
   @@index([folderId])
   @@index([filename])
+  @@index([createdAt])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  content   String
+  type      String   @default("review") // 'review'
+  isRead    Boolean  @default(false)
+  articleId String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([isRead])
   @@index([createdAt])
 }
