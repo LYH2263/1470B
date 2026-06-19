@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Layout, Menu, Badge } from 'antd';
-import { FileTextOutlined, DashboardOutlined, CommentOutlined, TagsOutlined, PictureOutlined, AuditOutlined, BellOutlined } from '@ant-design/icons';
+import { FileTextOutlined, DashboardOutlined, CommentOutlined, TagsOutlined, PictureOutlined, AuditOutlined, BellOutlined, StarOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/router';
 import type { MenuProps } from 'antd';
 import { useAuth } from '@/contexts/AuthContext';
@@ -70,6 +70,11 @@ export default function Sidebar() {
       key: '/comments',
       icon: <CommentOutlined />,
       label: '评论管理',
+    },
+    {
+      key: '/favorites',
+      icon: <StarOutlined />,
+      label: '我的收藏',
     },
     {
       key: '/notifications',

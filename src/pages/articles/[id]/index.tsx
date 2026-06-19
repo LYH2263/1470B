@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Card, Descriptions, Button, Spin, Tag, message, Space, Divider, List, Form, Input, Avatar, Empty } from 'antd';
-import { UserOutlined, MessageOutlined, HistoryOutlined } from '@ant-design/icons';
+import { UserOutlined, MessageOutlined, HistoryOutlined, StarOutlined, StarFilled } from '@ant-design/icons';
 import { useRouter } from 'next/router';
 import DOMPurify from 'isomorphic-dompurify';
 import MainLayout from '@/components/layout/MainLayout';
@@ -9,6 +9,7 @@ import type { Article } from '@/types/article';
 import type { Comment, CommentFormData } from '@/types/comment';
 import { formatDate, importanceMap } from '@/lib/utils';
 import { fetchWithAuth } from '@/lib/api';
+import type { FavoriteCountResponse } from '@/types/favorite';
 
 const reviewStatusMap: Record<string, { label: string; color: string }> = {
   pending_review: { label: '待审核', color: 'warning' },
@@ -26,6 +27,8 @@ export default function ArticleDetailPage() {
   const [submitting, setSubmitting] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [form] = Form.useForm<CommentFormData>();
+  const [favoriteInfo, setFavoriteInfo] = useState<FavoriteCountResponse>({ count: 0, isFavorited: false });
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -72,6 +75,70 @@ export default function ArticleDetailPage() {
 
     fetchComments();
   }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchFavoriteInfo = async () => {
+      try {
+        const response = await fetchWithAuth(`/api/articles/${id}/favorites`);
+        const result = await response.json();
+
+        if (result.success) {
+          setFavoriteInfo(result.data);
+        }
+      } catch (error) {
+        console.error('获取收藏信息失败:', error);
+      }
+    };
+
+    fetchFavoriteInfo();
+  }, [id]);
+
+  const handleFavorite = async () => {
+    if (!id || typeof id !== 'string') return;
+
+    setFavoriteLoading(true);
+    try {
+      if (favoriteInfo.isFavorited) {
+        const response = await fetchWithAuth('/api/favorites', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ articleId: id }),
+        });
+        const result = await response.json();
+        if (result.success) {
+          message.success('已取消收藏');
+          setFavoriteInfo((prev) => ({ ...prev, isFavorited: false, count: prev.count - 1 }));
+        } else {
+          message.error(result.error || '取消收藏失败');
+        }
+      } else {
+        const response = await fetchWithAuth('/api/favorites', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ articleId: id }),
+        });
+        const result = await response.json();
+
+        if (result.success) {
+          message.success('收藏成功');
+          setFavoriteInfo((prev) => ({ ...prev, isFavorited: true, count: prev.count + 1 }));
+        } else {
+          message.error(result.error || '收藏失败');
+        }
+      }
+    } catch (error) {
+      console.error('操作失败:', error);
+      message.error('操作失败');
+    } finally {
+      setFavoriteLoading(false);
+    }
+  };
 
   const handleSubmitComment = async (values: CommentFormData) => {
     if (!id) return;
@@ -138,6 +205,16 @@ export default function ArticleDetailPage() {
           title="文章详情"
           extra={
             <Space>
+              <Button
+                icon={favoriteInfo.isFavorited ? <StarFilled /> : <StarOutlined />}
+                onClick={handleFavorite}
+                loading={favoriteLoading}
+                type={favoriteInfo.isFavorited ? 'primary' : 'default'}
+                style={{ color: favoriteInfo.isFavorited ? '#faad14' : undefined }}
+              >
+                {favoriteInfo.isFavorited ? '已收藏' : '收藏'}
+                <Tag color="gold" style={{ marginLeft: 8 }}>{favoriteInfo.count}</Tag>
+              </Button>
               <Button
                 icon={<HistoryOutlined />}
                 onClick={() => setShowVersionHistory(!showVersionHistory)}
