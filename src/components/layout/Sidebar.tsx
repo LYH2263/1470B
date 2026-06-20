@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Layout, Menu, Badge } from 'antd';
-import { FileTextOutlined, DashboardOutlined, CommentOutlined, TagsOutlined, PictureOutlined, AuditOutlined, BellOutlined, StarOutlined, SafetyCertificateOutlined, FileSearchOutlined } from '@ant-design/icons';
+import { FileTextOutlined, DashboardOutlined, CommentOutlined, TagsOutlined, PictureOutlined, AuditOutlined, BellOutlined, StarOutlined, SafetyCertificateOutlined, FileSearchOutlined, BarChartOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/router';
 import type { MenuProps } from 'antd';
 import { useAuth } from '@/contexts/AuthContext';
@@ -84,6 +84,11 @@ export default function Sidebar() {
       key: '/comments',
       icon: <CommentOutlined />,
       label: '评论管理',
+    },
+    {
+      key: '/reports',
+      icon: <BarChartOutlined />,
+      label: '数据报表',
     },
     {
       key: '/favorites',
