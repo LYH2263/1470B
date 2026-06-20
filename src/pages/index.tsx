@@ -4,7 +4,7 @@ import { SearchOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/router';
 import type { Article, ArticleListResponse } from '@/types/article';
 import type { Tag as TagType } from '@/types/tag';
-import { formatDate, importanceMap } from '@/lib/utils';
+import { formatDate, importanceMap, formatReadingTime } from '@/lib/utils';
 import MainLayout from '@/components/layout/MainLayout';
 import { fetchWithAuth } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -250,6 +250,13 @@ export default function ArticlesPage() {
       dataIndex: 'views',
       key: 'views',
       width: 100,
+    },
+    {
+      title: '阅读时长',
+      dataIndex: 'content',
+      key: 'readingTime',
+      width: 100,
+      render: (content: string) => formatReadingTime(content),
     },
     {
       title: '操作',

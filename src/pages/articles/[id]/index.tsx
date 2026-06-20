@@ -7,7 +7,7 @@ import MainLayout from '@/components/layout/MainLayout';
 import VersionHistory from '@/components/articles/VersionHistory';
 import type { Article } from '@/types/article';
 import type { Comment, CommentFormData } from '@/types/comment';
-import { formatDate, importanceMap } from '@/lib/utils';
+import { formatDate, importanceMap, formatReadingTime } from '@/lib/utils';
 import { fetchWithAuth } from '@/lib/api';
 import type { FavoriteCountResponse } from '@/types/favorite';
 
@@ -246,6 +246,7 @@ export default function ArticleDetailPage() {
               </Tag>
             </Descriptions.Item>
             <Descriptions.Item label="阅读数">{article.views}</Descriptions.Item>
+            <Descriptions.Item label="阅读时长">{formatReadingTime(article.content)}</Descriptions.Item>
             {article.reviewStatus === 'rejected' && article.rejectReason && (
               <Descriptions.Item label="驳回理由" span={2}>
                 <span style={{ color: '#ff4d4f' }}>{article.rejectReason}</span>

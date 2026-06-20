@@ -3,9 +3,10 @@ import dynamic from 'next/dynamic';
 import { EDITOR_CONFIG } from '@/lib/constants';
 import { fetchWithAuth } from '@/lib/api';
 import { Button, Dropdown, message } from 'antd';
-import { PictureOutlined, UploadOutlined, FolderOutlined } from '@ant-design/icons';
+import { PictureOutlined, UploadOutlined, FolderOutlined, ClockCircleOutlined, FileTextOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import MediaLibraryPicker from './MediaLibraryPicker';
+import { getWordStats } from '@/lib/utils';
 import 'react-quill/dist/quill.snow.css';
 
 // 动态导入 ReactQuill，禁用 SSR
@@ -22,6 +23,8 @@ export default function RichTextEditor({ value = '', onChange, placeholder }: Ri
   const [mounted, setMounted] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const editorRef = useRef<any>(null);
+
+  const wordStats = useMemo(() => getWordStats(value), [value]);
 
   // 确保组件已挂载
   useEffect(() => {
@@ -178,7 +181,6 @@ export default function RichTextEditor({ value = '', onChange, placeholder }: Ri
         placeholder={placeholder}
         style={{
           height: `${EDITOR_CONFIG.HEIGHT}px`,
-          marginBottom: `${EDITOR_CONFIG.MARGIN_BOTTOM}px`,
         }}
       />
       {/* 自定义图片下拉按钮，覆盖默认 image 按钮 */}
@@ -199,6 +201,43 @@ export default function RichTextEditor({ value = '', onChange, placeholder }: Ri
             style={{ height: 28 }}
           />
         </Dropdown>
+      </div>
+
+      {/* 字数与阅读时长统计栏 */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          gap: 16,
+          padding: '8px 12px',
+          backgroundColor: '#fafafa',
+          border: '1px solid #d9d9d9',
+          borderTop: 'none',
+          borderRadius: '0 0 2px 2px',
+          fontSize: 12,
+          color: '#666',
+        }}
+      >
+        <span>
+          <FileTextOutlined style={{ marginRight: 4 }} />
+          字数: {wordStats.totalChars}
+        </span>
+        <span>
+          中文: {wordStats.chineseChars} 字
+        </span>
+        <span>
+          英文: {wordStats.englishWords} 词
+        </span>
+        {wordStats.imageCount > 0 && (
+          <span>
+            图片: {wordStats.imageCount} 张
+          </span>
+        )}
+        <span style={{ color: '#1890ff' }}>
+          <ClockCircleOutlined style={{ marginRight: 4 }} />
+          阅读时长: 约 {wordStats.readingTimeMinutes || 1} 分钟
+        </span>
       </div>
 
       <MediaLibraryPicker

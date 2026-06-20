@@ -90,3 +90,84 @@ export function resolveTemplate(
     content: resolveTemplateVariables(template.content, mergedVariables),
   };
 }
+
+// 阅读速度配置
+export const READING_SPEED = {
+  CHINESE_CHARS_PER_MINUTE: 400,
+  ENGLISH_WORDS_PER_MINUTE: 200,
+  IMAGE_SECONDS_PER_IMAGE: 12,
+} as const;
+
+// 统计中文字符数
+export function countChineseChars(text: string): number {
+  const chineseRegex = /[\u4e00-\u9fa5]/g;
+  const matches = text.match(chineseRegex);
+  return matches ? matches.length : 0;
+}
+
+// 统计英文单词数
+export function countEnglishWords(text: string): number {
+  const englishText = text.replace(/[\u4e00-\u9fa5]/g, ' ');
+  const words = englishText.match(/[a-zA-Z]+/g);
+  return words ? words.length : 0;
+}
+
+// 统计 HTML 中的图片数量
+export function countImages(html: string): number {
+  const imgRegex = /<img[^>]*>/gi;
+  const matches = html.match(imgRegex);
+  return matches ? matches.length : 0;
+}
+
+// 计算阅读时长（秒）
+export function calculateReadingTimeSeconds(content: string): number {
+  const plainText = htmlToPlainText(content);
+  const chineseChars = countChineseChars(plainText);
+  const englishWords = countEnglishWords(plainText);
+  const imageCount = countImages(content);
+
+  const chineseReadingSeconds = (chineseChars / READING_SPEED.CHINESE_CHARS_PER_MINUTE) * 60;
+  const englishReadingSeconds = (englishWords / READING_SPEED.ENGLISH_WORDS_PER_MINUTE) * 60;
+  const imageReadingSeconds = imageCount * READING_SPEED.IMAGE_SECONDS_PER_IMAGE;
+
+  return Math.ceil(chineseReadingSeconds + englishReadingSeconds + imageReadingSeconds);
+}
+
+// 计算阅读时长（分钟，向上取整）
+export function calculateReadingTimeMinutes(content: string): number {
+  const seconds = calculateReadingTimeSeconds(content);
+  return Math.ceil(seconds / 60);
+}
+
+// 格式化阅读时长显示
+export function formatReadingTime(content: string): string {
+  const minutes = calculateReadingTimeMinutes(content);
+  if (minutes <= 0) {
+    return '约 1 分钟';
+  }
+  return `约 ${minutes} 分钟`;
+}
+
+// 获取字数统计信息
+export function getWordStats(content: string): {
+  chineseChars: number;
+  englishWords: number;
+  imageCount: number;
+  totalChars: number;
+  readingTimeMinutes: number;
+} {
+  const plainText = htmlToPlainText(content);
+  const chineseChars = countChineseChars(plainText);
+  const englishWords = countEnglishWords(plainText);
+  const imageCount = countImages(content);
+  const readingTimeMinutes = calculateReadingTimeMinutes(content);
+  const totalChars = plainText.replace(/\s/g, '').length;
+
+  return {
+    chineseChars,
+    englishWords,
+    imageCount,
+    totalChars,
+    readingTimeMinutes,
+  };
+}
