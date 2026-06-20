@@ -10,6 +10,12 @@ import type {
   MediaFolder,
   MediaFolderFormData,
 } from '@/types/media';
+import type {
+  ArticleTemplate,
+  ArticleTemplateFormData,
+  ArticleTemplateListQuery,
+  ArticleTemplateListResponse,
+} from '@/types/article-template';
 import { PAGINATION } from './constants';
 
 // 辅助函数：将 Prisma 模型转换为 DTO
@@ -654,4 +660,174 @@ export async function deleteMediaFolder(id: string): Promise<boolean> {
     console.error('删除文件夹失败:', error);
     throw error;
   }
+}
+
+// 文章模板 DTO 转换
+function mapArticleTemplateToDTO(template: {
+  id: string;
+  name: string;
+  category: string | null;
+  titleFormat: string;
+  content: string;
+  createdAt: Date;
+  updatedAt: Date;
+}): ArticleTemplate {
+  return {
+    id: template.id,
+    name: template.name,
+    category: template.category ?? undefined,
+    titleFormat: template.titleFormat,
+    content: template.content,
+    createdAt: template.createdAt.toISOString(),
+    updatedAt: template.updatedAt.toISOString(),
+  };
+}
+
+// 获取模板列表（支持分页、搜索、分类筛选）
+export async function getArticleTemplates(
+  query: ArticleTemplateListQuery = {}
+): Promise<ArticleTemplateListResponse> {
+  const {
+    page = PAGINATION.DEFAULT_PAGE,
+    pageSize = PAGINATION.DEFAULT_PAGE_SIZE,
+    keyword,
+    category,
+  } = query;
+
+  const where: Prisma.ArticleTemplateWhereInput = {};
+
+  if (keyword) {
+    where.OR = [
+      { name: { contains: keyword } },
+      { titleFormat: { contains: keyword } },
+    ];
+  }
+
+  if (category) {
+    where.category = category;
+  }
+
+  const [total, templates] = await Promise.all([
+    prisma.articleTemplate.count({ where }),
+    prisma.articleTemplate.findMany({
+      where,
+      orderBy: { updatedAt: 'desc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+  ]);
+
+  const data = templates.map(mapArticleTemplateToDTO);
+
+  return {
+    data,
+    total,
+    page,
+    pageSize,
+  };
+}
+
+// 获取所有模板（无分页，用于下拉选择）
+export async function getAllArticleTemplates(): Promise<ArticleTemplate[]> {
+  const templates = await prisma.articleTemplate.findMany({
+    orderBy: { name: 'asc' },
+  });
+
+  return templates.map(mapArticleTemplateToDTO);
+}
+
+// 根据 ID 获取模板
+export async function getArticleTemplateById(id: string): Promise<ArticleTemplate | null> {
+  const template = await prisma.articleTemplate.findUnique({
+    where: { id },
+  });
+
+  if (!template) return null;
+
+  return mapArticleTemplateToDTO(template);
+}
+
+// 创建模板
+export async function createArticleTemplate(
+  data: ArticleTemplateFormData
+): Promise<ArticleTemplate> {
+  const template = await prisma.articleTemplate.create({
+    data: {
+      name: data.name,
+      category: data.category || null,
+      titleFormat: data.titleFormat,
+      content: data.content,
+    },
+  });
+
+  return mapArticleTemplateToDTO(template);
+}
+
+// 更新模板
+export async function updateArticleTemplate(
+  id: string,
+  data: ArticleTemplateFormData
+): Promise<ArticleTemplate | null> {
+  try {
+    const template = await prisma.articleTemplate.update({
+      where: { id },
+      data: {
+        name: data.name,
+        category: data.category || null,
+        titleFormat: data.titleFormat,
+        content: data.content,
+      },
+    });
+
+    return mapArticleTemplateToDTO(template);
+  } catch (error: unknown) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      return null;
+    }
+    if (
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      typeof (error as { code?: unknown }).code === 'string' &&
+      (error as { code: string }).code === 'P2025'
+    ) {
+      return null;
+    }
+
+    console.error('更新模板失败:', error);
+    throw error;
+  }
+}
+
+// 删除模板（支持批量）
+export async function deleteArticleTemplates(ids: string[]): Promise<number> {
+  const result = await prisma.articleTemplate.deleteMany({
+    where: {
+      id: {
+        in: ids,
+      },
+    },
+  });
+
+  return result.count;
+}
+
+// 复制模板
+export async function copyArticleTemplate(id: string): Promise<ArticleTemplate | null> {
+  const template = await prisma.articleTemplate.findUnique({
+    where: { id },
+  });
+
+  if (!template) return null;
+
+  const copied = await prisma.articleTemplate.create({
+    data: {
+      name: `${template.name} (副本)`,
+      category: template.category,
+      titleFormat: template.titleFormat,
+      content: template.content,
+    },
+  });
+
+  return mapArticleTemplateToDTO(copied);
 }

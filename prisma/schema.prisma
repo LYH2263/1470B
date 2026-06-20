@@ -188,3 +188,17 @@ model AuditLog {
   @@index([createdAt])
   @@index([responseStatus])
 }
+
+model ArticleTemplate {
+  id           String   @id @default(uuid())
+  name         String
+  category     String?
+  titleFormat  String   // 预设标题格式，支持变量占位符
+  content      String   // 正文 HTML 骨架，支持变量占位符
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([name])
+  @@index([category])
+  @@index([createdAt])
+}

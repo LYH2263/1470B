@@ -6,6 +6,7 @@ import dayjs, { type Dayjs } from 'dayjs';
 import RichTextEditor from '@/components/common/RichTextEditor';
 import type { Article, ArticleFormData } from '@/types/article';
 import type { Tag as TagType } from '@/types/tag';
+import type { ResolvedTemplate } from '@/types/article-template';
 import { fetchWithAuth } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -13,6 +14,7 @@ interface ArticleFormProps {
   initialValues?: Article;
   mode: 'create' | 'edit';
   formId?: string;
+  templateData?: ResolvedTemplate;
 }
 
 interface ArticleFormValues {
@@ -24,13 +26,23 @@ interface ArticleFormValues {
   tagIds?: string[];
 }
 
-export default function ArticleForm({ initialValues, mode, formId }: ArticleFormProps) {
+export default function ArticleForm({ initialValues, mode, formId, templateData }: ArticleFormProps) {
   const router = useRouter();
   const [form] = Form.useForm<ArticleFormValues>();
   const [tags, setTags] = useState<TagType[]>([]);
   const [tagsLoading, setTagsLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const { user } = useAuth();
+
+  useEffect(() => {
+    if (mode === 'create' && templateData) {
+      form.setFieldsValue({
+        title: templateData.title,
+        content: templateData.content,
+        author: user?.name || '',
+      });
+    }
+  }, [mode, templateData, form, user]);
 
   useEffect(() => {
     const fetchTags = async () => {

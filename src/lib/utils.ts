@@ -1,5 +1,7 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import type { TemplateVariables, ResolvedTemplate, ArticleTemplate } from '@/types/article-template';
+import dayjs from 'dayjs';
 
 // 合并 Tailwind CSS 类名
 export function cn(...inputs: ClassValue[]) {
@@ -59,4 +61,32 @@ export function generateSummary(content: string, maxLength: number = 100): strin
     return trimmed;
   }
   return trimmed.slice(0, maxLength) + '...';
+}
+
+// 替换模板中的变量占位符
+export function resolveTemplateVariables(text: string, variables: TemplateVariables): string {
+  return text.replace(/\{\{\s*(\w+)\s*\}\}/g, (match, key: string) => {
+    const value = variables[key];
+    return value !== undefined ? value : match;
+  });
+}
+
+// 获取默认模板变量
+export function getDefaultTemplateVariables(author?: string): TemplateVariables {
+  return {
+    date: dayjs().format('YYYY-MM-DD'),
+    author: author || '',
+  };
+}
+
+// 解析完整模板，替换标题和内容中的变量
+export function resolveTemplate(
+  template: Pick<ArticleTemplate, 'titleFormat' | 'content'>,
+  variables: TemplateVariables
+): ResolvedTemplate {
+  const mergedVariables = { ...getDefaultTemplateVariables(variables.author), ...variables };
+  return {
+    title: resolveTemplateVariables(template.titleFormat, mergedVariables),
+    content: resolveTemplateVariables(template.content, mergedVariables),
+  };
 }

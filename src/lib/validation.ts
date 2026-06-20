@@ -77,3 +77,27 @@ export const ArticleWithTagsSchema = ArticleSchema.extend({
 });
 
 export type ArticleWithTagsInput = z.infer<typeof ArticleWithTagsSchema>;
+
+export const ArticleTemplateSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, '模板名称不能为空')
+    .max(100, '模板名称不能超过100个字符'),
+  category: z
+    .string()
+    .trim()
+    .max(50, '分类不能超过50个字符')
+    .optional()
+    .or(z.literal('')),
+  titleFormat: z
+    .string()
+    .trim()
+    .min(1, '预设标题格式不能为空')
+    .max(200, '预设标题格式不能超过200个字符'),
+  content: z
+    .string()
+    .min(1, '正文模板内容不能为空'),
+});
+
+export type ArticleTemplateInput = z.infer<typeof ArticleTemplateSchema>;

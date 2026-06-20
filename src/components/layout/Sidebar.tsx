@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Layout, Menu, Badge } from 'antd';
-import { FileTextOutlined, DashboardOutlined, CommentOutlined, TagsOutlined, PictureOutlined, AuditOutlined, BellOutlined, StarOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
+import { FileTextOutlined, DashboardOutlined, CommentOutlined, TagsOutlined, PictureOutlined, AuditOutlined, BellOutlined, StarOutlined, SafetyCertificateOutlined, FileSearchOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/router';
 import type { MenuProps } from 'antd';
 import { useAuth } from '@/contexts/AuthContext';
@@ -66,6 +66,15 @@ export default function Sidebar() {
       icon: <PictureOutlined />,
       label: '媒体库',
     },
+    ...(isAdmin
+      ? [
+          {
+            key: '/templates',
+            icon: <FileSearchOutlined />,
+            label: '模板管理',
+          },
+        ]
+      : []),
     {
       key: '/tags',
       icon: <TagsOutlined />,
