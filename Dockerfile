@@ -5,18 +5,15 @@ WORKDIR /app
 # 安装 OpenSSL 和其他必要的依赖
 RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
-# 安装 pnpm
-RUN corepack enable && corepack prepare pnpm@10 --activate
-
 # 复制依赖文件
-COPY package.json pnpm-lock.yaml ./
+COPY package.json package-lock.json ./
 COPY prisma ./prisma/
 
 # 安装依赖
-RUN pnpm install --frozen-lockfile
+RUN npm ci
 
 # 生成 Prisma Client
-RUN pnpm prisma generate
+RUN npx prisma generate
 
 # 构建阶段
 FROM node:20-slim AS builder
@@ -24,9 +21,6 @@ WORKDIR /app
 
 # 安装 OpenSSL
 RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
-
-# 安装 pnpm
-RUN corepack enable && corepack prepare pnpm@10 --activate
 
 # 复制依赖
 COPY --from=deps /app/node_modules ./node_modules
@@ -37,7 +31,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
 # 构建应用
-RUN pnpm build
+RUN npm run build
 
 # 生产运行阶段
 FROM node:20-slim AS runner
@@ -56,7 +50,6 @@ RUN useradd --system --uid 1001 nextjs
 # 复制必要文件
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/pnpm-lock.yaml ./pnpm-lock.yaml
 
 # 复制 Prisma 文件
 COPY --from=builder /app/prisma ./prisma
@@ -70,9 +63,6 @@ COPY --from=builder /app/scripts ./scripts
 
 # 复制启动脚本
 COPY --from=builder /app/docker-entrypoint.sh ./docker-entrypoint.sh
-
-# 安装 pnpm（用于运行脚本）
-RUN corepack enable && corepack prepare pnpm@10 --activate
 
 # 安装 Prisma CLI（用于运行迁移）- 使用与项目相同的版本
 RUN npm install -g prisma@5.22.0
