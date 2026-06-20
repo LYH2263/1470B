@@ -1,6 +1,6 @@
 import type { NextApiResponse } from 'next';
 import { updateCommentStatus, deleteComments } from '@/lib/comment-storage';
-import { withAuth, type AuthenticatedRequest } from '@/lib/middleware';
+import { withAuth, withAudit, composeHandlers, type AuthenticatedRequest } from '@/lib/middleware';
 import type { ApiResponse } from '@/types/article';
 
 async function handler(
@@ -78,4 +78,4 @@ async function handler(
   }
 }
 
-export default withAuth(handler);
+export default composeHandlers(withAuth, withAudit)(handler);

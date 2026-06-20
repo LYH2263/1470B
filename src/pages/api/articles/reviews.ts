@@ -4,7 +4,7 @@ import { getArticleAuthorUserId } from '@/lib/review-storage';
 import { createNotification } from '@/lib/notification-storage';
 import type { ApiResponse } from '@/types/article';
 import { PAGINATION, SEARCH } from '@/lib/constants';
-import { withRole, type AuthenticatedRequest } from '@/lib/middleware';
+import { withRole, withAudit, composeHandlers, type AuthenticatedRequest } from '@/lib/middleware';
 
 async function handler(
   req: AuthenticatedRequest,
@@ -147,4 +147,4 @@ async function handler(
   }
 }
 
-export default withRole(['admin'], handler);
+export default composeHandlers((h) => withRole(['admin'], h), withAudit)(handler);

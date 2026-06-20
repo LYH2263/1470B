@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { withAudit } from '@/lib/middleware';
 import { createComment, getApprovedCommentsByArticleId } from '@/lib/comment-storage';
 import { CommentSchema } from '@/lib/validation';
 import { checkRateLimit } from '@/lib/rate-limit';
@@ -88,4 +89,4 @@ async function handler(
   }
 }
 
-export default handler;
+export default withAudit(handler);

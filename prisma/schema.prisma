@@ -168,3 +168,23 @@ model Favorite {
   @@index([articleId])
   @@index([createdAt])
 }
+
+model AuditLog {
+  id            String   @id @default(uuid())
+  userId        String?
+  username      String?
+  action        String
+  method        String
+  endpoint      String
+  requestBody   String?
+  responseStatus Int
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([username])
+  @@index([action])
+  @@index([createdAt])
+  @@index([responseStatus])
+}

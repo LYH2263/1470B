@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { withAudit } from '@/lib/middleware';
 import { getUserWithPassword, verifyPassword, generateToken } from '@/lib/auth';
 
 interface LoginRequest {
@@ -29,7 +30,7 @@ const loginAttempts = new Map<string, { count: number; lockUntil: number }>();
 const MAX_ATTEMPTS = 5;
 const LOCK_TIME = 15 * 60 * 1000; // 15分钟
 
-export default async function handler(
+export default withAudit(async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse>
 ) {
@@ -132,7 +133,7 @@ export default async function handler(
       },
     });
   }
-}
+});
 
 function recordFailedAttempt(username: string) {
   const attempts = loginAttempts.get(username) || { count: 0, lockUntil: 0 };

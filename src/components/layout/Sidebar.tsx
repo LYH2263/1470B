@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Layout, Menu, Badge } from 'antd';
-import { FileTextOutlined, DashboardOutlined, CommentOutlined, TagsOutlined, PictureOutlined, AuditOutlined, BellOutlined, StarOutlined } from '@ant-design/icons';
+import { FileTextOutlined, DashboardOutlined, CommentOutlined, TagsOutlined, PictureOutlined, AuditOutlined, BellOutlined, StarOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/router';
 import type { MenuProps } from 'antd';
 import { useAuth } from '@/contexts/AuthContext';
@@ -53,6 +53,11 @@ export default function Sidebar() {
             key: '/reviews',
             icon: <AuditOutlined />,
             label: '文章审核',
+          },
+          {
+            key: '/audit-logs',
+            icon: <SafetyCertificateOutlined />,
+            label: '审计日志',
           },
         ]
       : []),

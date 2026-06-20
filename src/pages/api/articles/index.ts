@@ -4,7 +4,7 @@ import { createVersion, generateChangeSummary } from '@/lib/version-storage';
 import { ArticleWithTagsSchema } from '@/lib/validation';
 import type { ApiResponse } from '@/types/article';
 import { PAGINATION, SEARCH } from '@/lib/constants';
-import { withAuth, type AuthenticatedRequest } from '@/lib/middleware';
+import { withAuth, withAudit, composeHandlers, type AuthenticatedRequest } from '@/lib/middleware';
 
 async function handler(
   req: AuthenticatedRequest,
@@ -137,4 +137,4 @@ async function handler(
   }
 }
 
-export default withAuth(handler);
+export default composeHandlers(withAuth, withAudit)(handler);

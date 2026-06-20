@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { verifyToken, getUserById, type JWTPayload } from './auth';
+import { logAuditEvent, getClientIp, getUserAgent } from './audit-log';
 
 export interface AuthenticatedRequest extends NextApiRequest {
   user?: JWTPayload;
@@ -9,6 +10,8 @@ type ApiHandler = (
   req: AuthenticatedRequest,
   res: NextApiResponse
 ) => Promise<void> | void;
+
+const WRITE_METHODS = ['POST', 'PUT', 'DELETE', 'PATCH'];
 
 export function withAuth(handler: ApiHandler): ApiHandler {
   return async (req: AuthenticatedRequest, res: NextApiResponse) => {
@@ -81,4 +84,78 @@ export function withRole(roles: string[], handler: ApiHandler): ApiHandler {
 
     return handler(req, res);
   });
+}
+
+export function withAudit(handler: ApiHandler): ApiHandler {
+  return async (req: AuthenticatedRequest, res: NextApiResponse) => {
+    const method = req.method || 'UNKNOWN';
+    const endpoint = req.url || 'unknown';
+    const isWriteOperation = WRITE_METHODS.includes(method);
+
+    if (!isWriteOperation) {
+      return handler(req, res);
+    }
+
+    const originalStatus = res.status.bind(res);
+    let responseStatus = 200;
+    const requestBody = req.body;
+
+    const proxiedStatus = (code: number) => {
+      responseStatus = code;
+      return originalStatus(code);
+    };
+
+    (res as NextApiResponse & { status: (code: number) => NextApiResponse }).status = proxiedStatus;
+
+    const originalJson = res.json.bind(res) as (body: unknown) => NextApiResponse;
+    const proxiedJson = (body: unknown): NextApiResponse => {
+      const result = originalJson(body);
+
+      if (isWriteOperation) {
+        queueMicrotask(() => {
+          logAuditEvent({
+            method,
+            endpoint,
+            requestBody,
+            responseStatus,
+            user: req.user || null,
+            ipAddress: getClientIp(req) ?? undefined,
+            userAgent: getUserAgent(req) ?? undefined,
+          });
+        });
+      }
+
+      return result;
+    };
+
+    (res as NextApiResponse & { json: (body: unknown) => NextApiResponse }).json = proxiedJson;
+
+    try {
+      await handler(req, res);
+    } catch (error) {
+      if (isWriteOperation) {
+        queueMicrotask(() => {
+          logAuditEvent({
+            method,
+            endpoint,
+            requestBody,
+            responseStatus: responseStatus || 500,
+            user: req.user || null,
+            ipAddress: getClientIp(req) ?? undefined,
+            userAgent: getUserAgent(req) ?? undefined,
+          });
+        });
+      }
+      throw error;
+    }
+  };
+}
+
+export function composeHandlers(...middlewares: Array<(h: ApiHandler) => ApiHandler>): (handler: ApiHandler) => ApiHandler {
+  return (handler: ApiHandler): ApiHandler => {
+    return middlewares.reduceRight<ApiHandler>(
+      (acc, middleware) => middleware(acc),
+      handler
+    );
+  };
 }

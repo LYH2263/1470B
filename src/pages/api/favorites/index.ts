@@ -1,5 +1,5 @@
 import type { NextApiResponse } from 'next';
-import { withAuth, type AuthenticatedRequest } from '@/lib/middleware';
+import { withAuth, withAudit, composeHandlers, type AuthenticatedRequest } from '@/lib/middleware';
 import { createFavorite, deleteFavoriteById, deleteFavorite, getFavoritesByUserId } from '@/lib/favorite-storage';
 import type { ApiResponse } from '@/types/article';
 import { PAGINATION } from '@/lib/constants';
@@ -139,4 +139,4 @@ async function handler(
   }
 }
 
-export default withAuth(handler);
+export default composeHandlers(withAuth, withAudit)(handler);

@@ -1,11 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { withAudit } from '@/lib/middleware';
 
 interface ApiResponse {
   success: boolean;
   message?: string;
 }
 
-export default async function handler(
+export default withAudit(async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse>
 ) {
@@ -22,4 +23,4 @@ export default async function handler(
     success: true,
     message: '登出成功',
   });
-}
+});

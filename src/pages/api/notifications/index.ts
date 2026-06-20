@@ -1,7 +1,7 @@
 import type { NextApiResponse } from 'next';
 import { getNotifications, markAllNotificationsRead } from '@/lib/notification-storage';
 import { PAGINATION } from '@/lib/constants';
-import { withAuth, type AuthenticatedRequest } from '@/lib/middleware';
+import { withAuth, withAudit, composeHandlers, type AuthenticatedRequest } from '@/lib/middleware';
 
 async function handler(
   req: AuthenticatedRequest,
@@ -78,4 +78,4 @@ async function handler(
   }
 }
 
-export default withAuth(handler);
+export default composeHandlers(withAuth, withAudit)(handler);

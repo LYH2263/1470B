@@ -6,7 +6,7 @@ import formidable from 'formidable';
 import type { ApiResponse } from '@/types/article';
 import type { MediaFile } from '@/types/media';
 import { FILE_UPLOAD } from '@/lib/constants';
-import { withAuth, type AuthenticatedRequest } from '@/lib/middleware';
+import { withAuth, withAudit, composeHandlers, type AuthenticatedRequest } from '@/lib/middleware';
 import { createMediaFile } from '@/lib/storage';
 
 type AllowedMimeType = (typeof FILE_UPLOAD.ALLOWED_TYPES)[number];
@@ -25,7 +25,7 @@ export const config = {
   },
 };
 
-export default withAuth(async function handler(
+export default composeHandlers(withAuth, withAudit)(async function handler(
   req: AuthenticatedRequest,
   res: NextApiResponse<ApiResponse>
 ) {

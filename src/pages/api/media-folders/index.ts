@@ -5,7 +5,7 @@ import {
   createMediaFolder,
 } from '@/lib/storage';
 import type { ApiResponse } from '@/types/article';
-import { withAuth, type AuthenticatedRequest } from '@/lib/middleware';
+import { withAuth, withAudit, composeHandlers, type AuthenticatedRequest } from '@/lib/middleware';
 
 async function handler(
   req: AuthenticatedRequest,
@@ -70,4 +70,4 @@ async function handler(
   }
 }
 
-export default withAuth(handler);
+export default composeHandlers(withAuth, withAudit)(handler);
